@@ -1,0 +1,7 @@
+langchain-openai==0.3.27
+langgraph==0.6.6
+langchain-core
+ics
+pdfplumber
+gradio
+python-dotenv

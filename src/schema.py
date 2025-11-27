@@ -1,0 +1,61 @@
+from typing import List, TypedDict
+from pydantic import BaseModel, Field
+
+class TimeEntry(TypedDict):
+    event_name: str
+    date_raw: str
+    time_raw: str
+class DetailsEntry(TypedDict):
+    event_name: str
+    format: str
+    weightage: str
+class State(TypedDict):
+    raw_text: str
+
+    classification: str
+    
+    time_data: List[TimeEntry]
+    details_data: List[DetailsEntry]
+
+    final_schedule: List[dict]
+class RouteDecision(BaseModel):
+    decision: str = Field(
+        description = "Return 'extract' if the text contains an exam/evaluation schedule table. Return 'skip' if it is syllabus, textbook or introduction."
+    )
+
+#This is for branch A related to time of the examination
+class TimeExtraction(BaseModel):
+    subject_name: str = Field(
+        description="The Name of the Course (e.g., 'Digital Design', 'Microprocessors') usually found in the header or title."
+    )
+    event_name: str = Field(
+        description = "Name of the exam (e.g., 'Mid-Sem Exam', 'Comprehensive Exam', 'Quiz 1', 'Quiz 2', 'Assignment', 'Lab')"
+    )
+    date_raw: str = Field(
+        description = "The date exactly as written in the text (e.g., '11/10/2025' or '15-Sept')"
+    )
+    time_raw: str = Field(
+        description = "The time exactly as written. Look for specific times (e.g., '4-5:30 PM') or codes like 'FN' or 'AN'."
+    )
+
+class TimeList(BaseModel):
+    items: List[TimeExtraction]
+
+#This is for branch B related to other details of the examination
+class DetailsExtraction(BaseModel):
+    subject_name: str = Field(
+        description="The Name of the Course (e.g., 'Digital Design') (Must match the name extracted in the Time Branch)."
+    )
+    event_name: str = Field(
+        description = "Name of the exam (Must match the name extracted in the Time Branch)"
+    )
+    format: str = Field(
+        description = "The format of the exam, Look for 'OB' (Open Book), 'CB' (Closed Book), or explicit text."
+    )
+    weightage: str = Field(
+        description = "The weightage or marks percentage (e.g., '25%', '35%')."
+    )
+
+class DetailsList(BaseModel):
+    items: List[DetailsExtraction]
+
