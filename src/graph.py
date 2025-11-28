@@ -60,7 +60,7 @@ def time_extractor_node(state: State):
     Extract all exam dates and times from the text.
     
     RULES:
-    1. Extract 'Subject Name' from the Course Title and other Course information.
+    1. Extract 'Subject Name' from the descriptive Course Title(PREFERRED FORMAT: "Electrical Machines"). - If you only see Course Number, look around it for the English name.
     2. Extract 'Event Name' exactly as written.
     3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
     4. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
@@ -91,7 +91,7 @@ def details_extractor_node(state: State):
     Extract evaluation metadata (Format and Weightage).
     
     CRITICAL INSTRUCTIONS:
-    1. Extract 'Subject Name' from the Course Title and other Course information.
+    1. Extract 'Subject Name' from the descriptive Course Title(PREFERRED FORMAT: "Electrical Machines"). - If you only see Course Number, look around it for the English name.
     2. Extract 'Event Name' (Must match the exam names).
     3. Extract 'Format':
        - If Open Book/Open/OB -> Output ONLY 'OB'.
