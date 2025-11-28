@@ -59,11 +59,12 @@ def time_extractor_node(state: State):
     system_msg = """
     Extract all exam dates and times from the text.
     
-    CRITICAL INSTRUCTIONS:
+    RULES:
     1. Extract 'Subject Name' from the Course Title and other Course information.
     2. Extract 'Event Name' exactly as written.
-    3. Extract 'Date' (Convert DD/MM/YY to YYYY-MM-DD if possible).
-    4. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
+    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
+    4. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
+    5. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
        If text says '4-5:30 PM', output exactly '4-5:30 PM'.
     """
     
@@ -157,17 +158,20 @@ def aggregator_node(state: State):
             clean_search = search_evt.replace("exam", "").replace("ination", "").replace("-", "").strip()
             matched_detail = simple_map.get(clean_search, {})
         
-        start, end = predefined(t["date_raw"], t["time_raw"], final_event_name)
-
         if t_subject:
             full_title = f"{search_sub.title()} + {final_event_name}"
         else:
             full_title = final_event_name
         
+        date_from_llm = t.get("date_iso", "")
+        time_raw = t["time_raw"]
+
+        start, end = predefined(date_from_llm, time_raw, final_event_name)
+
         if start == "Time not found":
             final_start = f"{end}T00:00:00"
             final_end = f"{end}T23:59:59"
-            final_title = f"⚠️ TIME TBA: {full_title}"
+            full_title = f"⚠️ TIME TBA: {full_title}"
 
         else:
             final_start = start
@@ -201,7 +205,6 @@ def route_decision(state: State):
         return "end"
     
 # GRAPH NOW
-
 workflow = StateGraph(State)
 
 workflow.add_node("router", router_node)

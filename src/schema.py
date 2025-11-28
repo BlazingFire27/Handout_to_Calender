@@ -31,8 +31,10 @@ class TimeExtraction(BaseModel):
     event_name: str = Field(
         description = "Name of the exam (e.g., 'Mid-Sem Exam', 'Comprehensive Exam', 'Quiz 1', 'Quiz 2', 'Assignment', 'Lab')"
     )
-    date_raw: str = Field(
-        description = "The date exactly as written in the text (e.g., '11/10/2025' or '15-Sept')"
+    date_iso: str = Field(
+        description="The date converted strictly to YYYY-MM-DD format (e.g., 2025-10-15). "
+                    "If the text says '15-Sept', output '2025-09-15'. "
+                    "If multiple dates exist for one event (e.g. '15-Sept and 10-Nov'), create separate entries."
     )
     time_raw: str = Field(
         description = "The time exactly as written. Look for specific times (e.g., '4-5:30 PM') or codes like 'FN' or 'AN'."

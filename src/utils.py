@@ -1,8 +1,8 @@
 import re
 from datetime import datetime 
 
-def predefined(date_str, time_str, event_name):
-    date_clean = date_str.strip()
+def predefined(date_from_llm, time_str, event_name):
+    date_clean = date_from_llm.strip()
     date_iso = date_clean
 
     formats = [
@@ -10,7 +10,9 @@ def predefined(date_str, time_str, event_name):
         "%d-%m-%Y",
         "%d/%m/%y",
         "%d-%m-%y",
-        "%d.%m.%Y"
+        "%d.%m.%Y",
+        "%Y-%m-%d",
+        "%d-%b-%Y"
     ]
 
     for fmt in formats:
@@ -21,7 +23,7 @@ def predefined(date_str, time_str, event_name):
         except ValueError:
             continue
 
-    event_lower = event_name.lower().strip()
+    event_lower = normalize_event_name(event_name).lower()
     time_clean = time_str.strip().upper()
 
     is_compre = (

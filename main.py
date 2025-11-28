@@ -1,5 +1,29 @@
 import time
+import pdfplumber
+
 from src import app
+
+# def process_pdf(pdf_file):
+#     if pdf_file is None:
+#         return None, "Upload the PDF please"
+    
+#     all_events = []
+
+#     try:
+#         with pdfplumber.open(pdf1_path) as pdf1:
+#             print(f"Total pages = {len(pdf1.pages)}")
+
+#         for i in range(len(pdf1.pages)):
+#             page = pdf1.pages[i]
+#             raw_text = page.extract_text()
+
+#             print("="*50)
+#             print(f"We have page {i+1}")
+#             print("="*50)
+
+#             print(raw_text)
+#             print("\n" + "="*50 + "\n")
+
 
 test_cases = [
     {
