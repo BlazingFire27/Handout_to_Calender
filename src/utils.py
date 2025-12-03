@@ -1,5 +1,5 @@
 import re
-from datetime import datetime 
+from datetime import datetime, timedelta 
 
 def predefined(date_from_llm, time_str, event_name):
     date_clean = date_from_llm.strip()
@@ -38,24 +38,35 @@ def predefined(date_from_llm, time_str, event_name):
         elif "AN" in time_clean:
             return f"{date_iso}T14:00:00", f"{date_iso}T17:00:00"
 
-    match = re.search(r"(\d+)", time_clean)
+    match = re.search(r"(\d+)(?::(\d+))?", time_clean)
     
     if match:
         hour = int(match.group(1))
+        minute = int(match.group(2) or 0)
         is_pm = "PM" in time_clean
         
-        if 8<= hour <= 11:
+        if 8 <= hour <= 11:
             start_hour = hour
         elif hour == 12:
             start_hour = 12 if is_pm else 12
             if "AM" in time_clean: start_hour = 0
         else:
             start_hour = hour + 12 if is_pm else hour
+        try:
+            start_dt_str = f"{date_iso} {start_hour:02d}:{minute:02d}:00"
+            start_dt = datetime.strptime(start_dt_str, "%Y-%m-%d %H:%M:%S")
             
-        start_iso = f"{start_hour:02d}:00:00"
-        end_hour = start_hour + 1
+            end_dt = start_dt + timedelta(hours=1, minutes=30)
+            
+            return start_dt.isoformat(), end_dt.isoformat()
         
-        return f"{date_iso}T{start_iso}", f"{date_iso}T{end_hour:02d}:30:00"
+        except ValueError:
+            pass
+
+        # start_iso = f"{start_hour:02d}:00:00"
+        # end_hour = start_hour + 1
+        
+        # return f"{date_iso}T{start_iso}", f"{date_iso}T{end_hour:02d}:30:00"
 
     return "Time not found", date_iso
 

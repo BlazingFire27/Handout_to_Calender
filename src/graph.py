@@ -39,7 +39,8 @@ def router_node(state: State):
         ("system", system_message),
         ("human", "{text}"),
     ])
-    
+    # prompt = ChatPromptTemplate.from_template(system_message)
+
     chain = prompt | llm.with_structured_output(RouteDecision)
 
     try:
@@ -56,23 +57,26 @@ def router_node(state: State):
 
 def time_extractor_node(state: State):
     
-    system_msg = """
-    Extract all exam dates and times from the text.
+    system_message = """
+    Extract the Course Name and all Exam Dates/Times.
     
     RULES:
-    1. Extract 'Subject Name' from the descriptive Course Title(PREFERRED FORMAT: "Electrical Machines"). - If you only see Course Number, look around it for the English name.
-    2. Extract 'Event Name' exactly as written.
-    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
-    4. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
-    5. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
+    1. COURSE NAME: Look for the descriptive English title (e.g. "Digital Design").
+       - IGNORE alphanumeric codes if possible (e.g. ignore "CS F215", "ECE/INSTR F244").
+       - Example Input: "Course: EEE F111 Electrical Machines" -> Output: "Electrical Machines"
+       - Example Input: "Course: Digital Design (CS F215)" -> Output: "Digital Design"
+    2. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
+    3  If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
+    4. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
        If text says '4-5:30 PM', output exactly '4-5:30 PM'.
     """
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_msg),
+        ("system", system_message),
         ("human", "{text}"),
     ])
-    
+    # prompt = ChatPromptTemplate.from_template(system_message)
+
     chain = prompt | llm.with_structured_output(TimeList)
 
     try:
@@ -87,11 +91,14 @@ def time_extractor_node(state: State):
     
 def details_extractor_node(state: State):
     
-    system_msg = """
+    system_message = """
     Extract evaluation metadata (Format and Weightage).
     
     CRITICAL INSTRUCTIONS:
-    1. Extract 'Subject Name' from the descriptive Course Title(PREFERRED FORMAT: "Electrical Machines"). - If you only see Course Number, look around it for the English name.
+    1. COURSE NAME: Look for the descriptive English title (e.g. "Digital Design").
+       - IGNORE alphanumeric codes if possible (e.g. ignore "CS F215", "ECE/INSTR F244").
+       - Example Input: "Course: EEE F111 Electrical Machines" -> Output: "Electrical Machines"
+       - Example Input: "Course: Digital Design (CS F215)" -> Output: "Digital Design"
     2. Extract 'Event Name' (Must match the exam names).
     3. Extract 'Format':
        - If Open Book/Open/OB -> Output ONLY 'OB'.
@@ -101,9 +108,10 @@ def details_extractor_node(state: State):
     """
     
     prompt = ChatPromptTemplate.from_messages([
-        ("system", system_msg),
+        ("system", system_message),
         ("human", "{text}"),
     ])
+    # prompt = ChatPromptTemplate.from_template(system_message)
     
     chain = prompt | llm.with_structured_output(DetailsList)
 

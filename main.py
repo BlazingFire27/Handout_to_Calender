@@ -6,7 +6,7 @@ import arrow
 from src import app
 
 OUTPUT_ICS = "Exam_schedule.ics"
-default_file = "Handouts/DD Handout_2025_2026.pdf"
+default_file = "Handouts/EM Handout.pdf"
 
 def save_ics(events, filename):
     c = Calendar()
