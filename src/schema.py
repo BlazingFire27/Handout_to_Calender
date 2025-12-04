@@ -1,4 +1,4 @@
-from typing import List, TypedDict, Optional
+from typing import List, TypedDict
 from pydantic import BaseModel, Field
 
 class TimeEntry(TypedDict):
@@ -14,7 +14,7 @@ class DetailsEntry(TypedDict):
 class State(TypedDict):
     raw_text: str
     classification: str
-    known_course_title: Optional[str]
+    known_course_title: str
     time_data: List[TimeEntry]
     details_data: List[DetailsEntry]
     final_schedule: List[dict]
