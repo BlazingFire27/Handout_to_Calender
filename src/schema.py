@@ -38,6 +38,8 @@ class TimeExtraction(BaseModel):
     )
     date_iso: str = Field(
         description="The date converted strictly to YYYY-MM-DD format (e.g., 2025-10-15). "
+                    "CRITICAL: The input text follows DD/MM/YYYY format. "
+                    "Example: '09/10/2025' is October 9th (2025-10-09), NOT September 10th. "        
                     "If the text says '15-Sept', output '2025-09-15'. "
                     "If multiple dates exist for one event (e.g. '15-Sept and 10-Nov'), create separate entries."
     )

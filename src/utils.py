@@ -42,6 +42,9 @@ def predefined(date_from_llm, time_str, event_name):
 
     times = list(re.finditer(r"(\d{1,2})(?::(\d{2}))?", time_clean))
 
+    if ("MIN" in time_clean or "HRS" in time_clean) and not (":" in time_clean or "AM" in time_clean or "PM" in time_clean):
+        return "Time not found", date_iso
+      
     if not times:
         return "Time not found", date_iso
     

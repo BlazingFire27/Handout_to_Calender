@@ -48,7 +48,7 @@ def extract_course_title(text: str):
 
     try:
         result = chain.invoke({
-            "text": text[:1000], #first 1000 chars instead of full text because most of the time course title is present at the top only
+            "text": text[:3000],
         })
         return result.title
     
