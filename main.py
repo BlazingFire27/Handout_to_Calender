@@ -9,8 +9,9 @@ file2_path = "Handouts/DD Handout_2025_2026.pdf"
 
 def process_pdf(pdf_file):
     if pdf_file is None:
-        return None, "Upload the PDF please"
+        return []
     
+    print(f"Processing PDF: {pdf_file}")
     raw_pages = []
 
     try:
@@ -62,10 +63,7 @@ def process_pdf(pdf_file):
         end_time = time.time()
         print(f"Time taken: {end_time - start_time:.2f} seconds.\n")
 
-    if all_events:
-        save_ics(all_events, OUTPUT_ICS)
-    else:
-        print("No events extracted from the document.")    
+    return all_events
 
 def main(pdf_files):
     all_pdf_events = []
