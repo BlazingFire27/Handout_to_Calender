@@ -23,11 +23,16 @@ class RouteDecision(BaseModel):
         description = "Return 'extract' if the text contains an exam/evaluation schedule table. Return 'skip' if it is syllabus, textbook or introduction."
     )
 
+class CourseTitle(BaseModel):
+    title: str = Field(
+        description="The descriptive Course Title"
+    )
+
 #This is for branch A related to time of the examination
 class TimeExtraction(BaseModel):
-    subject_name: str = Field(
-        description="The Name of the Course (e.g., 'Digital Design', 'Microprocessors') usually found in the header or title."
-    )
+    # subject_name: str = Field(
+    #     description="The Name of the Course (e.g., 'Digital Design', 'Microprocessors') usually found in the header or title."
+    # )
     event_name: str = Field(
         description = "Name of the exam (e.g., 'Mid-Sem Exam', 'Comprehensive Exam', 'Quiz 1', 'Quiz 2', 'Assignment', 'Lab')"
     )
@@ -45,9 +50,9 @@ class TimeList(BaseModel):
 
 #This is for branch B related to other details of the examination
 class DetailsExtraction(BaseModel):
-    subject_name: str = Field(
-        description="The Name of the Course (e.g., 'Digital Design') (Must match the name extracted in the Time Branch)."
-    )
+    # subject_name: str = Field(
+    #     description="The Name of the Course (e.g., 'Digital Design') (Must match the name extracted in the Time Branch)."
+    # )
     event_name: str = Field(
         description = "Name of the exam (Must match the name extracted in the Time Branch)"
     )
@@ -60,9 +65,3 @@ class DetailsExtraction(BaseModel):
 
 class DetailsList(BaseModel):
     items: List[DetailsExtraction]
-
-class CourseTitle(BaseModel):
-    title: str = Field(
-        description="The descriptive Course Title"
-    )
-
