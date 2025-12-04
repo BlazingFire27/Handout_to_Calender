@@ -1,4 +1,3 @@
-from datetime import datetime
 import os
 
 from langchain_openai import ChatOpenAI
@@ -6,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from langgraph.graph import StateGraph, END, START
 
-from src.schema import State, RouteDecision, TimeList, DetailsList
+from src.schema import State, RouteDecision, TimeList, DetailsList, CourseTitle
 from src.utils import normalize_event_name, clean_subject_key, predefined
 
 try:
@@ -23,6 +22,39 @@ llm = ChatOpenAI(
     temperature=0,
     max_retries=3,
 )
+
+def extract_course_title(text: str):
+    system_message = '''
+    Analyze the text to identify the Main Subject or Course Name of this document.
+    
+    CONTEXT: This is a university course handout.
+    
+    INSTRUCTIONS:
+    1. Find the descriptive English name (e.g. "Digital Design", "Microprocessors", "General Biology").
+    2. Ignore alphanumeric codes (like "CS F215", "EEE F111") if a descriptive name is present.
+    3. Ignore labels like "Course Title:", "Course No:", "Part II" - just extract the name itself.
+    
+    Examples:
+    - Text: "EEE F211 Electrical Machines" -> Output: "Electrical Machines"
+    - Text: "BITS PILANI ... GENERAL BIOLOGY" -> Output: "General Biology"
+    '''
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", system_message),
+        ("human", "{text}"),
+    ])
+
+    chain = prompt | llm.with_structured_output(CourseTitle)
+
+    try:
+        result = chain.invoke({
+            "text": text[:1000], #first 1000 chars instead of full text because most of the time course title is present at the top only
+        })
+        return result.title
+    
+    except Exception as e:
+        print(f"extracting course error= {e}")
+        return "Unknown Course"
 
 def router_node(state: State):
     # structured_llm = llm.with_strcutured_output(RouteDecision)
@@ -56,20 +88,17 @@ def router_node(state: State):
     return {"classification": decision}
 
 def time_extractor_node(state: State):
-    
-    system_message = """
-    Extract the Course Name and all Exam Dates/Times.
+
+    system_message = '''
+    Extract Exam Dates/Times.
     
     RULES:
-    1. COURSE NAME: Look for the descriptive English title (e.g. "Digital Design").
-       - IGNORE alphanumeric codes if possible (e.g. ignore "CS F215", "ECE/INSTR F244").
-       - Example Input: "Course: EEE F111 Electrical Machines" -> Output: "Electrical Machines"
-       - Example Input: "Course: Digital Design (CS F215)" -> Output: "Digital Design"
+    1. Extract 'Event Name' (e.g. "Quiz 1", "MidSem Exam", "Comprehensive Exam").
     2. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
-    3  If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
+    3. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
     4. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
        If text says '4-5:30 PM', output exactly '4-5:30 PM'.
-    """
+    '''
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
@@ -90,22 +119,18 @@ def time_extractor_node(state: State):
         return {"time_data": []}
     
 def details_extractor_node(state: State):
-    
-    system_message = """
+
+    system_message = '''
     Extract evaluation metadata (Format and Weightage).
     
-    CRITICAL INSTRUCTIONS:
-    1. COURSE NAME: Look for the descriptive English title (e.g. "Digital Design").
-       - IGNORE alphanumeric codes if possible (e.g. ignore "CS F215", "ECE/INSTR F244").
-       - Example Input: "Course: EEE F111 Electrical Machines" -> Output: "Electrical Machines"
-       - Example Input: "Course: Digital Design (CS F215)" -> Output: "Digital Design"
-    2. Extract 'Event Name' (Must match the exam names).
-    3. Extract 'Format':
+    RULES:
+    1. Extract 'Event Name' (Must match the exam names).
+    2. Extract 'Format':
        - If Open Book/Open/OB -> Output ONLY 'OB'.
        - If Closed Book/Closed/CB -> Output ONLY 'CB'.
-    4. Extract 'Weightage' (e.g., 25%, 15 Marks).
-    5. IGNORE Dates and Times.
-    """
+    3. Extract 'Weightage' (e.g., 25%, 15 Marks).
+    4. IGNORE Dates and Times.
+    '''
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
@@ -128,53 +153,39 @@ def details_extractor_node(state: State):
 def aggregator_node(state: State):
     time_data = state.get("time_data", [])
     details_data = state.get("details_data", [])
+    title = state.get("known_course_title", "Unknown").strip()
 
-    strict_map = {}
-    simple_map = {}
-
-    for item in details_data:
-        subject = item.get("subject_name", "").lower().strip()
-        event = item["event_name"].lower().strip()
-
-        sub_key = clean_subject_key(subject)
-        event_key = normalize_event_name(event).lower()
-        
-        strict_composition = f"{sub_key}|{event_key}"
-        strict_map[strict_composition] = item
-
-        clean_event = event_key.replace("exam", "").replace("ination", "").replace("-", "").strip()
-        simple_map[clean_event] = item
-        simple_map[event_key] = item
+    details_map = {}
+    for d in details_data:
+        key = normalize_event_name(d["event_name"]).lower()
+        clean_event = key.replace("exam", "").replace("ination", "").replace("-", "").strip()
+        details_map[clean_event] = d
+        details_map[key] = d
         
     final_schedule = []
 
     for t in time_data:
-        t_subject = t.get("subject_name", "").strip().lower()
-        t_event = t["event_name"].strip().lower()
-
+        t_event = t["event_name"]
         final_event_name = normalize_event_name(t_event)
-        search_sub = clean_subject_key(t_subject)
-        search_evt = final_event_name.lower()        
+        key = final_event_name.lower()        
 
-        strict_composition = f"{search_sub}|{search_evt}"
-        matched_detail = strict_map.get(strict_composition)
+        matched_detail = details_map.get(key, {})
 
         if not matched_detail:
-            matched_detail = simple_map.get(search_evt)
-
-        if not matched_detail:
-            clean_search = search_evt.replace("exam", "").replace("ination", "").replace("-", "").strip()
-            matched_detail = simple_map.get(clean_search, {})
-        
-        if t_subject:
-            full_title = f"{search_sub.title()} + {final_event_name}"
-        else:
-            full_title = final_event_name
-        
-        date_from_llm = t.get("date_iso", "")
+            for k, v in details_map.items():
+                if k in key or key in k:
+                    matched_detail = v
+                    break
+                
+        date_from_llm = t["date_iso"]
         time_raw = t["time_raw"]
 
         start, end = predefined(date_from_llm, time_raw, final_event_name)
+
+        if title:
+            full_title = f"{title.title()} + {final_event_name}"
+        else:
+            full_title = final_event_name
 
         if start == "Time not found":
             final_start = f"{end}T00:00:00"
