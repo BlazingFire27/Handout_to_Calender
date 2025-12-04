@@ -1,22 +1,22 @@
-from typing import List, TypedDict
+from typing import List, TypedDict, Optional
 from pydantic import BaseModel, Field
 
 class TimeEntry(TypedDict):
+    # subject_name: str
     event_name: str
     date_raw: str
     time_raw: str
 class DetailsEntry(TypedDict):
+    # subject_name: str
     event_name: str
     format: str
     weightage: str
 class State(TypedDict):
     raw_text: str
-
     classification: str
-    
+    known_course_title: Optional[str]
     time_data: List[TimeEntry]
     details_data: List[DetailsEntry]
-
     final_schedule: List[dict]
 class RouteDecision(BaseModel):
     decision: str = Field(
@@ -60,4 +60,9 @@ class DetailsExtraction(BaseModel):
 
 class DetailsList(BaseModel):
     items: List[DetailsExtraction]
+
+class CourseTitle(BaseModel):
+    title: str = Field(
+        description="The descriptive Course Title"
+    )
 
