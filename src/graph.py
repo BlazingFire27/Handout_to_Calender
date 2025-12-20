@@ -92,11 +92,17 @@ def time_extractor_node(state: State):
     system_message = '''
     Extract Exam Dates/Times.
     
-    RULES:
+    CRITICAL INSTRUCTION:
+    1. You are analyzing text from an INDIAN UNIVERSITY. 
+    2. Dates are strictly DD/MM/YYYY. (e.g., 09/10 is 9th October, NOT September 10th).
+
+    EXTRACTION RULES:
     1. Extract 'Event Name' (e.g. "Quiz 1", "MidSem Exam", "Comprehensive Exam").
-    2. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
-    3. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
-    4. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
+    2. 2. FILL 'date_logic' FIRST: Explicitly write down your reasoning. 
+       - Example: "Text says 09/10. Indian format means Day=09, Month=10 (Oct)."
+    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
+    4. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
+    5. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
        If text says '4-5:30 PM', output exactly '4-5:30 PM'.
     '''
     

@@ -1,5 +1,6 @@
 import re
 from datetime import datetime, timedelta
+# from dateutil import parser
 from ics import Calendar, Event
 import arrow
 
@@ -25,6 +26,13 @@ def predefined(date_from_llm, time_str, event_name):
         except ValueError:
             continue
 
+    # if date_clean:
+    #     try:
+    #         date_obj = parser.parse(date_clean, dayfirst=True, fuzzy=True)
+    #         date_iso = date_obj.strftime("%Y-%m-%d")
+    #     except (ValueError, OverflowError):
+    #         pass
+    
     event_lower = normalize_event_name(event_name).lower()
     time_clean = time_str.strip().upper()
 

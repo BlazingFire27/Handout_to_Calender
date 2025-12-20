@@ -36,10 +36,17 @@ class TimeExtraction(BaseModel):
     event_name: str = Field(
         description = "Name of the exam (e.g., 'Mid-Sem Exam', 'Comprehensive Exam', 'Quiz 1', 'Quiz 2', 'Assignment', 'Lab')"
     )
+    date_logic: str = Field(
+        description="Briefly explain the date extraction logic. "
+                    "Example: 'Found 09/10/2025. In DD/MM format, Day is 09, Month is 10 (October).'"
+    )
     date_iso: str = Field(
         description="The date converted strictly to YYYY-MM-DD format (e.g., 2025-10-15). "
-                    "CRITICAL: The input text follows DD/MM/YYYY format. "
-                    "Example: '09/10/2025' is October 9th (2025-10-09), NOT September 10th. "        
+                    "CRITICAL RULES: "
+                    "1. CONTEXT: The document uses Indian/British format (DD/MM/YYYY). "
+                    "2. The FIRST number is ALWAYS the DAY. The SECOND number is the MONTH. "
+                    "Example: '09/10/2025' -> Day=09, Month=10 -> Output: '2025-10-09'. "
+                    "Example: '11/10/2025' -> Day=11, Month=10 -> Output: '2025-10-11'. "      
                     "If the text says '15-Sept', output '2025-09-15'. "
                     "If multiple dates exist for one event (e.g. '15-Sept and 10-Nov'), create separate entries."
     )
