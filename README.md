@@ -52,6 +52,11 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 - The **Details Extractor Node** extracts informations like format (Open book or closed book), weightage (in terms of %)
 - The **Aggregator Node** combines the result obtained in previous nodes by checking if the obtained outputs belong to the same event name (for e.g. data obtained belongs to event name ""Comprehensive Exam"")
 
+## Testing & Validation
+To ensure high accuracy in classifying document pages and routing them efficiently, we have implemented a dedicated test suite for the **Router Node**. By utilizing `PydanticOutputParser`, the pipeline enforces strict JSON formatting. The model successfully analyzes various edge cases—including syllabus pages, administrative info, and tricky false-positive grading policies—correctly assigning the required action.
+
+![Router Tests Passed](Images/test_router_passed.png)
+
 ## Procedure to building the model
 ### Data processing
 Get the pdfs as input, extract the pdf contents using pdfplumber, save the contents in content.txt
