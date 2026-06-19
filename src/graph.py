@@ -1,7 +1,9 @@
 import os
 
 from langchain_openai import ChatOpenAI
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
 
 from langgraph.graph import StateGraph, END, START
 
@@ -13,14 +15,14 @@ try:
 except ImportError:
     API_KEY = os.getenv("OPENAI_API_KEY")
     API_BASE_URL = os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1")
-    MODEL_NAME = os.getenv("MODEL_NAME", "x-ai/grok-4.1-fast:free")
+    MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
 
 llm = ChatOpenAI(
     model_name=MODEL_NAME,
     openai_api_key=API_KEY,
     openai_api_base=API_BASE_URL,
     temperature=0,
-    max_retries=3,
+    max_retries=0, # Changed to 0 so it doesn't hang your terminal for 45s when OpenRouter limits are hit
 )
 
 def extract_course_title(text: str):
@@ -57,35 +59,40 @@ def extract_course_title(text: str):
         return "Unknown Course"
 
 def router_node(state: State):
-    # structured_llm = llm.with_strcutured_output(RouteDecision)
+    parser = PydanticOutputParser(pydantic_object=RouteDecision)
     
     system_message = '''
-    You are a document classifier.
-    Analyze the text. Does it contain keywords like:
-    'Evaluation Scheme', 'Exam Schedule', 'Mid-Sem', 'Comprehensive exam', 'Final Exam', 'Compre', 'Assignment', 'Test Dates'?
-    If YES -> return 'extract'.
-    If NO (just syllabus, outcomes, textbooks, intro) -> return 'skip'.
+    You are a document classifier for university handouts.
+    Analyze the text and categorize it. It may belong to multiple categories.
+    Categories:
+    - 'EVAL': MUST contain an actual Evaluation Scheme, Exam Schedule, list of Quizzes, Mid-Sem dates, Comprehensive exam dates, or Weightage tables. Do NOT classify general grading notices or make-up policies as EVAL unless actual dates or weightages are present.
+    - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives.
+    - 'ADMIN': Contains Instructor details, Chamber consultation hours, Office hours, Make-up policies.
+    - 'SKIP': General introduction, textbook lists without schedules, or completely irrelevant.
+    
+    Return a list of the applicable categories. If none apply, return ['SKIP'].
+    
+    {format_instructions}
     '''
     
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
         ("human", "{text}"),
     ])
-    # prompt = ChatPromptTemplate.from_template(system_message)
 
-    chain = prompt | llm.with_structured_output(RouteDecision)
+    chain = prompt | llm | parser
 
     try:
         result = chain.invoke({
             "text": state["raw_text"],
+            "format_instructions": parser.get_format_instructions()
         })
-        decision = result.decision.lower()
-
+        categories = result.categories
     except Exception as e:
         print(f"Router error= {e}")
-        decision = "skip"
+        categories = ["SKIP"]
 
-    return {"classification": decision}
+    return {"classification": categories}
 
 def time_extractor_node(state: State):
 
@@ -222,9 +229,11 @@ def aggregator_node(state: State):
     return {"final_schedule": final_schedule}
 
 def route_decision(state: State):
-    decision = state["classification"]
+    categories = state.get("classification", [])
     
-    if decision == "extract":
+    # For now, we only care about EVAL to trigger the existing extractors.
+    # Future PRs will add routing for SYLLABUS and ADMIN.
+    if "EVAL" in categories:
         return ["time_extractor", "details_extractor"]
     else:
         return "end"

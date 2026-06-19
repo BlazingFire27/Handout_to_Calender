@@ -13,14 +13,14 @@ class DetailsEntry(TypedDict):
     weightage: str
 class State(TypedDict):
     raw_text: str
-    classification: str
+    classification: List[str]
     known_course_title: str
     time_data: List[TimeEntry]
     details_data: List[DetailsEntry]
     final_schedule: List[dict]
 class RouteDecision(BaseModel):
-    decision: str = Field(
-        description = "Return 'extract' if the text contains an exam/evaluation schedule table. Return 'skip' if it is syllabus, textbook or introduction."
+    categories: List[str] = Field(
+        description="A list of categories this page belongs to. Can be multiple. Choose from: ['EVAL', 'SYLLABUS', 'ADMIN', 'SKIP']. Return 'EVAL' if it contains exam/evaluation details. Return 'SKIP' if irrelevant."
     )
 
 class CourseTitle(BaseModel):
