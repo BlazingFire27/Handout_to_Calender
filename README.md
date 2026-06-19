@@ -5,8 +5,10 @@ The project leverages the LangGraph, OpenAI wrapper etc to create the bot.
 ## Technologies
 Modules used:
 1. LangGraph (for StateGraph)
-2. langchain_openai (for OpenAI wrapper)
-3. Pdfplumber, Datetime and Pydantic (BaseModel and Field)
+2. langchain_openai (for OpenRouter wrapper)
+3. langchain_google_genai (for Google Gemini native wrapper)
+4. PyMuPDF (fitz) for PDF-to-Image rendering
+5. Datetime and Pydantic (BaseModel and Field)
 4. _Gradio User Interface (SOON...)_
 
 ## Future ideas:
@@ -21,11 +23,12 @@ Steps:
    <p align="center">
      <img src="Images/.env_placing.png" alt=".env placing">
    </p>
-2. The file contains three keywords:
-- OPENAI_API_KEY
-- OPENAI_API_BASE
-- MODEL_NAME </br> </br>
-NOTE that I have used **openrouter** and **meta-llama/llama-3.3-70b-instruct:free**
+2. The file contains four keywords required for the dual-architecture setup:
+- OPENAI_API_KEY (Your OpenRouter Key)
+- OPENAI_API_BASE (Set to https://openrouter.ai/api/v1)
+- MODEL_NAME (Your text router model) 
+- GOOGLE_API_KEY (Your native Google AI Studio Key) </br> </br>
+NOTE that I have used **openrouter** with **openai/gpt-oss-20b:free** for routing, and Google's native **gemini-2.5-flash** for multimodal vision extraction.
 
 ## NOTE (VERY IMPORTANT):
 - Make sure to use virtual environment so that the modules used in this particular project doesn't affect other projects
@@ -43,32 +46,40 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 ## Project Overview
 - The core of the project is to automate the process of finding the exam dates, convert into ics file which can be used in adding them to calender. </br>
 - The python file is included in this repository provides a detailed walkthrough of the model implementation. </br>
-- The parallel form of langgraph takes multiple handout pdfs as input, and processes page by page and extract the contents of the page containing evaluation components and aggregating them via two nodes in parallel. </br>
+- The multimodal graph takes multiple handout pdfs as input, processing them page by page. It simultaneously extracts the raw text and renders the page as a Base64 Image. </br>
 - See this image structure below:
 ![Graph Structure](Images/graph_structure.png)
-- The **Router Node** outputs a command to either "extract" the contents of this page or "skip" this page when looping page by page
-- This is because the evaluation components of the course will be provided in any one of the pages and we don't need to waste compute power by checking for all the pages
-- The **Time Extractor Node** extracts informations like Date of the exam, time of the exam, Afternoon or Forenoon
-- The **Details Extractor Node** extracts informations like format (Open book or closed book), weightage (in terms of %)
-- The **Aggregator Node** combines the result obtained in previous nodes by checking if the obtained outputs belong to the same event name (for e.g. data obtained belongs to event name ""Comprehensive Exam"")
+- The **Router Node** (Text-based) analyzes the page text and outputs a command to either "extract" the contents of this page or "skip" it.
+- This is because the evaluation components of the course will be provided in any one of the pages and we don't need to waste compute power by checking for all the pages.
+- The **Vision Eval Extractor Node** (Multimodal-based) takes over if an evaluation scheme is detected. It takes the *Image* of the page and natively extracts complex tables, fetching the Date, Time, Format (Open/Closed Book), and Weightage simultaneously.
+- The **Aggregator Node** combines the perfect JSON results obtained from the vision model and processes complex date logic into ISO formats before merging them.
 
 ## Testing & Validation
 To ensure high accuracy in classifying document pages and routing them efficiently, we have implemented a dedicated test suite for the **Router Node**. By utilizing `PydanticOutputParser`, the pipeline enforces strict JSON formatting. The model successfully analyzes various edge cases—including syllabus pages, administrative info, and tricky false-positive grading policies—correctly assigning the required action.
 
 ![Router Tests Passed](Images/test_router_passed.png)
 
-## Procedure to building the model
+### Vision Extractor Testing
+We implemented a secondary dedicated test script (`test_vision.py`) specifically for the newly introduced **Vision Eval Extractor Node**. This ensures that the native Gemini Multimodal API perfectly transcribes complex tables containing spanned/merged cells and confusing date formats from the image without breaking existing text logic.
+
+![Vision Node Tests Passed](Images/test_vision-text_hybrid_passed.png)## Procedure to building the model
 ### Data processing
-Get the pdfs as input, extract the pdf contents using pdfplumber, save the contents in content.txt
-```
-import pdfplumber
+Get the pdfs as input, extract both the pdf text and render the page as an image using PyMuPDF (fitz), returning them simultaneously for the Graph.
+```python
+import fitz # PyMuPDF
+import base64
 
 raw_pages = []
-with pdfplumber.open(pdf_file) as pdf:
-    for i in range(len(pdf.pages)):
-        page = pdf.pages[i]
-        text = page.extract_text()
-        raw_pages.append((i+1, text))
+doc = fitz.open(pdf_file)
+for i in range(len(doc)):
+    page = doc[i]
+    text = page.get_text()
+    
+    pix = page.get_pixmap(dpi=150)
+    img_bytes = pix.tobytes("png")
+    b64_image = base64.b64encode(img_bytes).decode("utf-8")
+    
+    raw_pages.append((i+1, text, b64_image))
 ```
 Code Credits = Thank you [https://github.com/jsvine/pdfplumber](https://github.com/jsvine/pdfplumber)
 
@@ -77,8 +88,7 @@ Code Credits = Thank you [https://github.com/jsvine/pdfplumber](https://github.c
 - Each page contents enters **router node** and is either skipped: if no contents related to exams are present or extracted: the contents of evaluation components
 
 ### Data Collection
-- The **time extractor** node extracts Date, time, and Forenoon or Afternoon
-- The **details extractor** node extracts format, weightage
+- The **Vision Eval Extractor Node** processes the image using `gemini-2.5-flash` to extract Event Name, Date, Time, Format, and Weightage in a single cohesive pass. This eliminates misalignments from text-based parsers.
 
 ### Aggregating
 To bring together all the collected data and aggregate in a particular json format
