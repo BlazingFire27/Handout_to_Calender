@@ -4,26 +4,39 @@ from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
+from langchain_core.messages import HumanMessage
 
 from langgraph.graph import StateGraph, END, START
 
-from src.schema import State, RouteDecision, TimeList, DetailsList, CourseTitle
+from src.schema import State, RouteDecision, EvalList, CourseTitle
 from src.utils import normalize_event_name, clean_subject_key, predefined
 
 try:
-    from src.config import API_KEY, API_BASE_URL, MODEL_NAME
+    from src.config import API_KEY, API_BASE_URL, MODEL_NAME, GOOGLE_API_KEY
 except ImportError:
     API_KEY = os.getenv("OPENAI_API_KEY")
     API_BASE_URL = os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1")
     MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
+    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Text LLM for routing (fast, cheap)
 llm = ChatOpenAI(
     model_name=MODEL_NAME,
-    openai_api_key=API_KEY,
     openai_api_base=API_BASE_URL,
     temperature=0,
-    max_retries=0, # Changed to 0 so it doesn't hang your terminal for 45s when OpenRouter limits are hit
+    max_retries=0, 
 )
+
+# Vision LLM for table extraction (heavy, multimodal natively)
+if GOOGLE_API_KEY:
+    vision_llm = ChatGoogleGenerativeAI(
+        model="gemini-2.5-flash",
+        google_api_key=GOOGLE_API_KEY,
+        temperature=0,
+        max_retries=3 
+    )
+else:
+    vision_llm = None
 
 def extract_course_title(text: str):
     system_message = '''
@@ -94,104 +107,65 @@ def router_node(state: State):
 
     return {"classification": categories}
 
-def time_extractor_node(state: State):
-
-    system_message = '''
-    Extract Exam Dates/Times.
+def vision_eval_extractor_node(state: State):
+    parser = PydanticOutputParser(pydantic_object=EvalList)
+    
+    system_text = f'''
+    Extract Exam Dates, Times, Format, and Weightage from the provided image of a university syllabus.
     
     CRITICAL INSTRUCTION:
-    1. You are analyzing text from an INDIAN UNIVERSITY. 
-    2. Dates are strictly DD/MM/YYYY. (e.g., 09/10 is 9th October, NOT September 10th).
-
+    1. You are analyzing an image from an INDIAN UNIVERSITY. 
+    2. Dates are strictly DD/MM/YYYY.
+    
     EXTRACTION RULES:
-    1. Extract 'Event Name' (e.g. "Quiz 1", "MidSem Exam", "Comprehensive Exam").
-    2. 2. FILL 'date_logic' FIRST: Explicitly write down your reasoning. 
-       - Example: "Text says 09/10. Indian format means Day=09, Month=10 (Oct)."
-    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. If year is missing, assume academic year 2025.
-    4. If an event has multiple dates (e.g. "Quizzes: 21-Sep and 12-Dec"), split them into TWO separate items in the list.
-    5. Extract 'Time'. If text says 'FN' or 'AN', output 'FN' or 'AN'. 
-       If text says '4-5:30 PM', output exactly '4-5:30 PM'.
+    1. Extract 'event_name' (e.g. "Quiz 1", "Mid-Sem Exam", "Comprehensive Exam").
+    2. Explain date logic first in 'date_logic'.
+    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. Assume academic year 2025.
+    4. If an event has multiple dates, create TWO separate items in the list.
+    5. Extract 'time_raw'. Output exactly what is written (e.g. '4-5:30 PM', 'FN', 'AN').
+    6. Extract 'format'. Look for 'OB' or 'CB'. If missing, return 'TBA'.
+    7. Extract 'weightage'. If missing, return 'N/A'.
+    
+    {parser.get_format_instructions()}
     '''
     
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("human", "{text}"),
-    ])
-    # prompt = ChatPromptTemplate.from_template(system_message)
-
-    chain = prompt | llm.with_structured_output(TimeList)
-
-    try:
-        result = chain.invoke({
-            "text": state["raw_text"]
-        })
-        return {"time_data": [item.model_dump() for item in result.items]}
-
-    except Exception as e:
-        print(f"Time extractor error= {e}")
-        return {"time_data": []}
+    image_b64 = state.get("page_image_b64", "")
     
-def details_extractor_node(state: State):
-
-    system_message = '''
-    Extract evaluation metadata (Format and Weightage).
-    
-    RULES:
-    1. Extract 'Event Name' (Must match the exam names).
-    2. Extract 'Format':
-       - If Open Book/Open/OB -> Output ONLY 'OB'.
-       - If Closed Book/Closed/CB -> Output ONLY 'CB'.
-    3. Extract 'Weightage' (e.g., 25%, 15 Marks).
-    4. IGNORE Dates and Times.
-    '''
-    
-    prompt = ChatPromptTemplate.from_messages([
-        ("system", system_message),
-        ("human", "{text}"),
-    ])
-    # prompt = ChatPromptTemplate.from_template(system_message)
-    
-    chain = prompt | llm.with_structured_output(DetailsList)
-
-    try:
-        result = chain.invoke({
-            "text": state["raw_text"]
-        })
-        return {"details_data": [item.model_dump() for item in result.items]}
+    if not image_b64:
+        print("Vision Extractor: No image provided!")
+        return {"eval_data": []}
         
+    if not vision_llm:
+        print("Vision Extractor: GOOGLE_API_KEY is missing! Cannot run vision model.")
+        return {"eval_data": []}
+
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": system_text},
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}},
+        ]
+    )
+
+    try:
+        response = vision_llm.invoke([message])
+        result = parser.invoke(response)
+        return {"eval_data": [item.model_dump() for item in result.items]}
     except Exception as e:
-        print(f"Details extract error= {e}")
-        return {"details_data": []}
+        print(f"Vision extractor error= {e}")
+        return {"eval_data": []}
 
 def aggregator_node(state: State):
-    time_data = state.get("time_data", [])
-    details_data = state.get("details_data", [])
+    eval_data = state.get("eval_data", [])
     title = state.get("known_course_title", "Unknown").strip()
 
-    details_map = {}
-    for d in details_data:
-        key = normalize_event_name(d["event_name"]).lower()
-        clean_event = key.replace("exam", "").replace("ination", "").replace("-", "").strip()
-        details_map[clean_event] = d
-        details_map[key] = d
-        
     final_schedule = []
 
-    for t in time_data:
-        t_event = t["event_name"]
+    for item in eval_data:
+        t_event = item["event_name"]
         final_event_name = normalize_event_name(t_event)
-        key = final_event_name.lower()        
-
-        matched_detail = details_map.get(key, {})
-
-        if not matched_detail:
-            for k, v in details_map.items():
-                if k in key or key in k:
-                    matched_detail = v
-                    break
                 
-        date_from_llm = t["date_iso"]
-        time_raw = t["time_raw"]
+        date_from_llm = item["date_iso"]
+        time_raw = item["time_raw"]
 
         start, end = predefined(date_from_llm, time_raw, final_event_name)
 
@@ -204,26 +178,19 @@ def aggregator_node(state: State):
             final_start = f"{end}T00:00:00"
             final_end = f"{end}T23:59:59"
             full_title = f"⚠️ TIME TBA: {full_title}"
-
         else:
             final_start = start
             final_end = end
-            
-        fmt = matched_detail.get("format", "")
-        wgt = matched_detail.get("weightage", "")
-        if not fmt or fmt == "TBA": fmt = "TBA"
-        if not wgt or wgt == "N/A": wgt = "N/A"
             
         entry = {
             "Subject": full_title,
             "Event_Name": final_event_name,
             "Start_DateTime": final_start,
             "End_DateTime": final_end,
-            "Format": fmt,
-            "Weightage": wgt,
-            "Raw_Time_String": t["time_raw"]
+            "Format": item.get("format", "TBA"),
+            "Weightage": item.get("weightage", "N/A"),
+            "Raw_Time_String": item["time_raw"]
         }
-
         final_schedule.append(entry)
 
     return {"final_schedule": final_schedule}
@@ -231,19 +198,16 @@ def aggregator_node(state: State):
 def route_decision(state: State):
     categories = state.get("classification", [])
     
-    # For now, we only care about EVAL to trigger the existing extractors.
-    # Future PRs will add routing for SYLLABUS and ADMIN.
     if "EVAL" in categories:
-        return ["time_extractor", "details_extractor"]
+        return "vision_eval_extractor"
     else:
         return "end"
-    
+
 # GRAPH NOW
 workflow = StateGraph(State)
 
 workflow.add_node("router", router_node)
-workflow.add_node("time_extractor", time_extractor_node)
-workflow.add_node("details_extractor", details_extractor_node)
+workflow.add_node("vision_eval_extractor", vision_eval_extractor_node)
 workflow.add_node("aggregator", aggregator_node)
 
 workflow.add_edge(START, "router")
@@ -251,13 +215,11 @@ workflow.add_conditional_edges(
     "router",
     route_decision,
     {
-        "time_extractor": "time_extractor",
-        "details_extractor": "details_extractor",
+        "vision_eval_extractor": "vision_eval_extractor",
         "end": END
     }
 )
-workflow.add_edge("time_extractor", "aggregator")
-workflow.add_edge("details_extractor", "aggregator")
+workflow.add_edge("vision_eval_extractor", "aggregator")
 workflow.add_edge("aggregator", END)
 
 app = workflow.compile()

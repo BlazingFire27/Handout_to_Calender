@@ -5,3 +5,5 @@ ics
 pdfplumber
 gradio
 python-dotenv
+pymupdf
+langchain-google-genai
