@@ -47,8 +47,7 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 - The core of the project is to automate the process of finding the exam dates, convert into ics file which can be used in adding them to calender. </br>
 - The python file is included in this repository provides a detailed walkthrough of the model implementation. </br>
 - The multimodal graph takes multiple handout pdfs as input, processing them page by page. It simultaneously extracts the raw text and renders the page as a Base64 Image. </br>
-- See this image structure below:
-![Graph Structure](Images/graph_structure.png)
+
 - The **Router Node** (Text-based) analyzes the page text and outputs a command to either "extract" the contents of this page or "skip" it.
 - This is because the evaluation components of the course will be provided in any one of the pages and we don't need to waste compute power by checking for all the pages.
 - The **Vision Eval Extractor Node** (Multimodal-based) takes over if an evaluation scheme is detected. It takes the *Image* of the page and natively extracts complex tables, fetching the Date, Time, Format (Open/Closed Book), and Weightage simultaneously.
@@ -144,3 +143,14 @@ User can input multiple pdfs at once
 
 ## TO ADD TO GOOGLE CALENDER
 - Import the Combined_Exam_Schedule.ics file into the calender and **BOOM** there you go all the events are now PRESENT
+
+---
+
+## 🗄️ Archive: Old Architecture (Scrapped)
+*Note: This was the original V1 architecture that used brittle, parallel text-extraction LLMs. It has officially been deprecated and replaced by the native Multimodal Vision Graph shown above.*
+
+![Old Graph Structure (Scrapped)](Images/graph_structure.png)
+
+### Why it was scrapped:
+1. **Brittle Aggregation:** Splitting the "Time" and "Details" into two completely separate LLM calls required fuzzy string matching in the Aggregator to stitch them back together. If one node called an event "Mid-Sem" and the other called it "Mid Semester", the merge would fail entirely.
+2. **Tabular Hallucinations:** Text-based parsers like `pdfplumber` destroy the visual layout of complex tables (merged cells, wrapped text, and column alignments). Feeding this scrambled text to an LLM caused massive hallucinations when trying to figure out which weightage belonged to which assignment. Switching to the Vision Graph solved this instantly.
