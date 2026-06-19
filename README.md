@@ -54,6 +54,36 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 - The **Vision Eval Extractor Node** (Multimodal-based) takes over if an evaluation scheme is detected. It takes the *Image* of the page and natively extracts complex tables, fetching the Date, Time, Format (Open/Closed Book), and Weightage simultaneously.
 - The **Aggregator Node** combines the perfect JSON results obtained from the vision model and processes complex date logic into ISO formats before merging them.
 
+### Planned Upgraded Architecture
+This flowchart represents the finalized architecture that is actively being built. It introduces parallel vision extraction (for handling syllabus and admin data simultaneously) and a robust `MemorySaver` checkpointer for state persistence and fallback capabilities.
+
+```mermaid
+flowchart TD
+    Checkpointer[(MemorySaver State Persistence)]
+
+    START([START]) --> RouterNode["router_node (Classifies text)"]
+
+    RouterNode --> RouteDecision{"route_decision()"}
+
+    RouteDecision -- "EVAL" --> VisionEval["eval_extractor_node (Dates & Weights)"]
+    RouteDecision -- "SYLLABUS" --> VisionSyllabus["syllabus_extractor_node (Course Topics)"]
+    RouteDecision -- "ADMIN" --> VisionAdmin["admin_extractor_node (Instructors)"]
+    RouteDecision -- "SKIP" --> END([END])
+
+    VisionEval --> AggregatorNode["aggregator_node (Merges Data)"]
+    VisionSyllabus --> AggregatorNode
+    VisionAdmin --> AggregatorNode
+
+    AggregatorNode --> END
+
+    %% Checkpointer connections to show state saving
+    RouterNode -. "Saves State" .-> Checkpointer
+    VisionEval -. "Saves State" .-> Checkpointer
+    VisionSyllabus -. "Saves State" .-> Checkpointer
+    VisionAdmin -. "Saves State" .-> Checkpointer
+    AggregatorNode -. "Saves Final State" .-> Checkpointer
+```
+
 ## Testing & Validation
 To ensure high accuracy in classifying document pages and routing them efficiently, we have implemented a dedicated test suite for the **Router Node**. By utilizing `PydanticOutputParser`, the pipeline enforces strict JSON formatting. The model successfully analyzes various edge cases—including syllabus pages, administrative info, and tricky false-positive grading policies—correctly assigning the required action.
 
