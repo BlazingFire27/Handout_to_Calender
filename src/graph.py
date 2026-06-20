@@ -7,6 +7,7 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.messages import HumanMessage
 
 from langgraph.graph import StateGraph, END, START
+from langgraph.checkpoint.memory import MemorySaver
 
 from src.schema import State, RouteDecision, EvalList, CourseTitle
 from src.utils import normalize_event_name, clean_subject_key, predefined
@@ -222,5 +223,6 @@ workflow.add_conditional_edges(
 workflow.add_edge("vision_eval_extractor", "aggregator")
 workflow.add_edge("aggregator", END)
 
-app = workflow.compile()
-print("Graph Compiled Successfully!")
+memory = MemorySaver()
+app = workflow.compile(checkpointer=memory)
+print("Graph Compiled Successfully with MemorySaver!")

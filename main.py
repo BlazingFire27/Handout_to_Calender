@@ -60,7 +60,12 @@ def process_pdf(pdf_file):
                 'known_course_title': course_title_final
             }
 
-            result = app.invoke(initial_state)
+            import os
+            base_name = os.path.basename(pdf_file)
+            thread_id = f"doc_{base_name}_page_{page_num}"
+            config = {"configurable": {"thread_id": thread_id}}
+
+            result = app.invoke(initial_state, config=config)
             events = result.get("final_schedule", [])
             all_events.extend(events)
             if events:
