@@ -98,6 +98,11 @@ To eliminate LLM date hallucination (e.g., American models confusing DD/MM forma
 
 ![Date Parser Tests Passed](Images/test_date_parser.png)
 
+### State Persistence and Time Travel (MemorySaver)
+To optimize API costs and performance, the LangGraph pipeline is integrated with a `MemorySaver` checkpointer. Every processed PDF page is assigned a unique `thread_id`. By persisting the graph's internal state, we enable LangGraph "Time Travel." This powerful feature allows the application to jump back to the state immediately following the expensive Vision LLM extraction, modify a user preference (e.g., changing the global date format from "DMY" to "MDY"), and mathematically regenerate the exact ICS schedule in **~0.01 seconds**—bypassing LLM API calls entirely.
+
+![Time Travel Tests Passed](Images/test_memory_saver.png)
+
 ## Procedure to building the model
 ### Data processing
 Get the pdfs as input, extract both the pdf text and render the page as an image using PyMuPDF (fitz), returning them simultaneously for the Graph.
