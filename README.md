@@ -91,7 +91,14 @@ To ensure high accuracy in classifying document pages and routing them efficient
 ### Vision Extractor Testing
 We implemented a secondary dedicated test script (`test_vision.py`) specifically for the newly introduced **Vision Eval Extractor Node**. This ensures that the native Gemini Multimodal API perfectly transcribes complex tables containing spanned/merged cells and confusing date formats from the image without breaking existing text logic.
 
-![Vision Node Tests Passed](Images/test_vision-text_hybrid_passed.png)## Procedure to building the model
+![Vision Node Tests Passed](Images/test_vision-text_hybrid_passed.png)
+
+### Deterministic Date Parsing (Bias Correction)
+To eliminate LLM date hallucination (e.g., American models confusing DD/MM formats), the extraction and formatting steps have been entirely decoupled. The Vision Node now only extracts the raw text snippet (e.g., `'11/10/25'`). The Aggregator Node then utilizes the deterministic Python `dateparser` library, anchored to the current academic year, to calculate the correct ISO timestamp mathematically based on a global user preference (`user_date_format: "DMY"` vs `"MDY"`).
+
+![Date Parser Tests Passed](Images/test_date_parser.png)
+
+## Procedure to building the model
 ### Data processing
 Get the pdfs as input, extract both the pdf text and render the page as an image using PyMuPDF (fitz), returning them simultaneously for the Graph.
 ```python
