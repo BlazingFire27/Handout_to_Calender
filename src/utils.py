@@ -1,37 +1,23 @@
 import re
 from datetime import datetime, timedelta
-# from dateutil import parser
+import dateparser
 from ics import Calendar, Event
 import arrow
 
-def predefined(date_from_llm, time_str, event_name):
-    date_clean = date_from_llm.strip()
+def predefined(date_raw, time_str, event_name, user_format="DMY"):
+    date_clean = date_raw.strip()
     date_iso = date_clean
 
-    formats = [
-        "%d/%m/%Y",
-        "%d-%m-%Y",
-        "%d/%m/%y",
-        "%d-%m-%y",
-        "%d.%m.%Y",
-        "%Y-%m-%d",
-        "%d-%b-%Y"
-    ]
-
-    for fmt in formats:
-        try:
-            date_obj = datetime.strptime(date_clean, fmt)
-            date_iso = date_obj.strftime("%Y-%m-%d")
-            break
-        except ValueError:
-            continue
-
-    # if date_clean:
-    #     try:
-    #         date_obj = parser.parse(date_clean, dayfirst=True, fuzzy=True)
-    #         date_iso = date_obj.strftime("%Y-%m-%d")
-    #     except (ValueError, OverflowError):
-    #         pass
+    # Use deterministic dateparser with user preference to eliminate bias
+    # Anchor relative parsing to Jan 1, 2025 to correctly resolve "25" as 2025 instead of 2125
+    base_date = datetime(2025, 1, 1)
+    date_obj = dateparser.parse(
+        date_clean, 
+        settings={'DATE_ORDER': user_format, 'RELATIVE_BASE': base_date}
+    )
+    
+    if date_obj:
+        date_iso = date_obj.strftime("%Y-%m-%d")
     
     event_lower = normalize_event_name(event_name).lower()
     time_clean = time_str.strip().upper()
