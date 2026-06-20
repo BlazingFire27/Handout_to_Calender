@@ -18,6 +18,7 @@ class State(TypedDict):
     known_course_title: str
     eval_data: List[dict] # Replaces time_data and details_data
     final_schedule: List[dict]
+    user_date_format: str
 class RouteDecision(BaseModel):
     categories: List[str] = Field(
         description="A list of categories this page belongs to. Can be multiple. Choose from: ['EVAL', 'SYLLABUS', 'ADMIN', 'SKIP']. Return 'EVAL' if it contains exam/evaluation details. Return 'SKIP' if irrelevant."
@@ -33,16 +34,10 @@ class EvalExtraction(BaseModel):
     event_name: str = Field(
         description = "Name of the exam (e.g., 'Mid-Sem Exam', 'Comprehensive Exam', 'Quiz 1')"
     )
-    date_logic: str = Field(
-        description="Briefly explain the date extraction logic. Example: 'Found 09/10/2025. In DD/MM format, Day is 09, Month is 10 (October).'"
-    )
-    date_iso: str = Field(
-        description="The date converted strictly to YYYY-MM-DD format (e.g., 2025-10-15). "
-                    "CRITICAL RULES: "
-                    "1. CONTEXT: The document uses Indian/British format (DD/MM/YYYY). "
-                    "2. The FIRST number is ALWAYS the DAY. The SECOND number is the MONTH. "
-                    "Example: '09/10/2025' -> Day=09, Month=10 -> Output: '2025-10-09'. "
-                    "If multiple dates exist for one event (e.g. '15-Sept and 10-Nov'), create separate entries."
+    date_raw: str = Field(
+        description="The exact text snippet where the date is mentioned (e.g., '09/10/2025', '15-Sept', '10th Nov'). "
+                    "DO NOT attempt to format it into ISO or translate it. Extract it precisely as it appears on the page. "
+                    "If multiple dates exist for one event, create separate entries."
     )
     time_raw: str = Field(
         description = "The time exactly as written. Look for specific times (e.g., '4-5:30 PM') or codes like 'FN' or 'AN'."

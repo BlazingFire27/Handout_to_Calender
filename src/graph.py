@@ -119,12 +119,11 @@ def vision_eval_extractor_node(state: State):
     
     EXTRACTION RULES:
     1. Extract 'event_name' (e.g. "Quiz 1", "Mid-Sem Exam", "Comprehensive Exam").
-    2. Explain date logic first in 'date_logic'.
-    3. Output 'date_iso' STRICTLY in 'YYYY-MM-DD' format. Assume academic year 2025.
-    4. If an event has multiple dates, create TWO separate items in the list.
-    5. Extract 'time_raw'. Output exactly what is written (e.g. '4-5:30 PM', 'FN', 'AN').
-    6. Extract 'format'. Look for 'OB' or 'CB'. If missing, return 'TBA'.
-    7. Extract 'weightage'. If missing, return 'N/A'.
+    2. Output 'date_raw' exactly as it is written in the document. Do not reformat.
+    3. If an event has multiple dates, create TWO separate items in the list.
+    4. Extract 'time_raw'. Output exactly what is written (e.g. '4-5:30 PM', 'FN', 'AN').
+    5. Extract 'format'. Look for 'OB' or 'CB'. If missing, return 'TBA'.
+    6. Extract 'weightage'. If missing, return 'N/A'.
     
     {parser.get_format_instructions()}
     '''
@@ -164,10 +163,11 @@ def aggregator_node(state: State):
         t_event = item["event_name"]
         final_event_name = normalize_event_name(t_event)
                 
-        date_from_llm = item["date_iso"]
+        date_raw = item["date_raw"]
         time_raw = item["time_raw"]
+        user_format = state.get("user_date_format", "DMY")
 
-        start, end = predefined(date_from_llm, time_raw, final_event_name)
+        start, end = predefined(date_raw, time_raw, final_event_name, user_format)
 
         if title:
             full_title = f"{title.title()} + {final_event_name}"
