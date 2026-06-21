@@ -25,7 +25,7 @@ llm = ChatOpenAI(
     model_name=MODEL_NAME,
     openai_api_base=API_BASE_URL,
     temperature=0,
-    max_retries=1, 
+    max_retries=5, 
 )
 
 # Vision LLM for table extraction (heavy, multimodal natively)
@@ -34,12 +34,12 @@ if GOOGLE_API_KEY:
         model="gemini-2.5-flash",
         google_api_key=GOOGLE_API_KEY,
         temperature=0,
-        max_retries=1 
+        max_retries=5 
     )
 else:
     vision_llm = None
 
-def extract_course_title(text: str):
+def extract_course_title(text: str, image_b64: str = ""):
     parser = PydanticOutputParser(pydantic_object=CourseTitle)
     
     system_message = '''
@@ -58,6 +58,21 @@ def extract_course_title(text: str):
     
     {format_instructions}
     '''
+
+    # Vision Fallback for scanned PDFs
+    if len(text.strip()) < 50 and image_b64 and vision_llm:
+        formatted_sys = system_message.format(format_instructions=parser.get_format_instructions())
+        message = HumanMessage(content=[
+            {"type": "text", "text": formatted_sys}, 
+            {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
+        ])
+        try:
+            response = vision_llm.invoke([message])
+            result = parser.invoke(response)
+            return result.title
+        except Exception as e:
+            print(f"Vision Title Extraction error= {e}")
+            return "Unknown Course"
 
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
@@ -94,6 +109,27 @@ def router_node(state: State):
     {format_instructions}
     '''
     
+    raw_text = state.get("raw_text", "").strip()
+    
+    # Vision Fallback for scanned PDFs or images
+    if len(raw_text) < 50:
+        image_b64 = state.get("page_image_b64", "")
+        if image_b64 and vision_llm:
+            formatted_sys = system_message.format(format_instructions=parser.get_format_instructions())
+            message = HumanMessage(content=[
+                {"type": "text", "text": formatted_sys}, 
+                {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
+            ])
+            try:
+                response = vision_llm.invoke([message])
+                result = parser.invoke(response)
+                return {"classification": result.categories}
+            except Exception as e:
+                print(f"Vision Router error= {e}")
+                return {"classification": ["SKIP"]}
+        else:
+            return {"classification": ["SKIP"]}
+            
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_message),
         ("human", "{text}"),
@@ -103,7 +139,7 @@ def router_node(state: State):
 
     try:
         result = chain.invoke({
-            "text": state["raw_text"],
+            "text": raw_text[:3000],
             "format_instructions": parser.get_format_instructions()
         })
         categories = result.categories
