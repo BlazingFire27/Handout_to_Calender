@@ -17,11 +17,13 @@ class State(TypedDict):
     classification: List[str]
     known_course_title: str
     eval_data: List[dict] # Replaces time_data and details_data
+    syllabus_data: List[dict] # New for Issue 8
+    reference_data: List[dict] # New for Issue 8
     final_schedule: List[dict]
     user_date_format: str
 class RouteDecision(BaseModel):
     categories: List[str] = Field(
-        description="A list of categories this page belongs to. Can be multiple. Choose from: ['EVAL', 'SYLLABUS', 'ADMIN', 'SKIP']. Return 'EVAL' if it contains exam/evaluation details. Return 'SKIP' if irrelevant."
+        description="A list of categories this page belongs to. Can be multiple. Choose from: ['EVAL', 'SYLLABUS', 'REFERENCES', 'SKIP']. Return 'EVAL' if it contains exam/evaluation details. Return 'SYLLABUS' if it contains course plan or lecture counts. Return 'REFERENCES' if it lists textbooks. Return 'SKIP' if irrelevant."
     )
 
 class CourseTitle(BaseModel):
@@ -51,3 +53,19 @@ class EvalExtraction(BaseModel):
 
 class EvalList(BaseModel):
     items: List[EvalExtraction]
+
+# Syllabus Schema
+class SyllabusExtraction(BaseModel):
+    module_name: str = Field(description="Name of the module or topic")
+    number_of_lectures: str = Field(description="Number of lectures allocated to this topic")
+
+class SyllabusList(BaseModel):
+    items: List[SyllabusExtraction]
+
+# References Schema
+class ReferenceExtraction(BaseModel):
+    title: str = Field(description="Title of the textbook or reference material")
+    author: str = Field(description="Author(s) of the textbook")
+
+class ReferenceList(BaseModel):
+    items: List[ReferenceExtraction]

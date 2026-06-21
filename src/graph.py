@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
 
-from src.schema import State, RouteDecision, EvalList, CourseTitle
+from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
 from src.utils import normalize_event_name, clean_subject_key, predefined
 
 try:
@@ -81,7 +81,7 @@ def router_node(state: State):
     Categories:
     - 'EVAL': MUST contain an actual Evaluation Scheme, Exam Schedule, list of Quizzes, Mid-Sem dates, Comprehensive exam dates, or Weightage tables. Do NOT classify general grading notices or make-up policies as EVAL unless actual dates or weightages are present.
     - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives.
-    - 'ADMIN': Contains Instructor details, Chamber consultation hours, Office hours, Make-up policies.
+    - 'REFERENCES': Contains Textbooks, Reference Books, required reading materials.
     - 'SKIP': General introduction, textbook lists without schedules, or completely irrelevant.
     
     Return a list of the applicable categories. If none apply, return ['SKIP'].
@@ -196,19 +196,76 @@ def aggregator_node(state: State):
 
     return {"final_schedule": final_schedule}
 
-def route_decision(state: State):
-    categories = state.get("classification", [])
+def vision_syllabus_extractor_node(state: State):
+    parser = PydanticOutputParser(pydantic_object=SyllabusList)
     
-    if "EVAL" in categories:
-        return "vision_eval_extractor"
-    else:
-        return "end"
+    system_text = f'''
+    Extract the Course Syllabus / Lecture Plan from the provided image.
+    
+    EXTRACTION RULES:
+    1. Extract 'module_name' (the name of the topic or unit).
+    2. Extract 'number_of_lectures' (the number of lectures allocated to this topic, e.g., '6', '12').
+    3. If lecture counts are not present, estimate or put 'N/A'.
+    
+    {parser.get_format_instructions()}
+    '''
+    
+    image_b64 = state.get("page_image_b64", "")
+    if not image_b64 or not vision_llm: return {"syllabus_data": []}
+    
+    message = HumanMessage(content=[{"type": "text", "text": system_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}])
+    try:
+        response = vision_llm.invoke([message])
+        result = parser.invoke(response)
+        return {"syllabus_data": [item.model_dump() for item in result.items]}
+    except Exception as e:
+        print(f"Syllabus extractor error= {e}")
+        return {"syllabus_data": []}
+
+def vision_reference_extractor_node(state: State):
+    parser = PydanticOutputParser(pydantic_object=ReferenceList)
+    
+    system_text = f'''
+    Extract the Textbooks and Reference Books from the provided image.
+    
+    EXTRACTION RULES:
+    1. Extract the 'title' of the book.
+    2. Extract the 'author' of the book.
+    
+    {parser.get_format_instructions()}
+    '''
+    
+    image_b64 = state.get("page_image_b64", "")
+    if not image_b64 or not vision_llm: return {"reference_data": []}
+    
+    message = HumanMessage(content=[{"type": "text", "text": system_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}])
+    try:
+        response = vision_llm.invoke([message])
+        result = parser.invoke(response)
+        return {"reference_data": [item.model_dump() for item in result.items]}
+    except Exception as e:
+        print(f"Reference extractor error= {e}")
+        return {"reference_data": []}
+
+def route_decision(state: State) -> list[str]:
+    categories = state.get("classification", [])
+    dests = []
+    
+    if "EVAL" in categories: dests.append("vision_eval_extractor")
+    if "SYLLABUS" in categories: dests.append("vision_syllabus_extractor")
+    if "REFERENCES" in categories: dests.append("vision_reference_extractor")
+    
+    if not dests:
+        return ["end"]
+    return dests
 
 # GRAPH NOW
 workflow = StateGraph(State)
 
 workflow.add_node("router", router_node)
 workflow.add_node("vision_eval_extractor", vision_eval_extractor_node)
+workflow.add_node("vision_syllabus_extractor", vision_syllabus_extractor_node)
+workflow.add_node("vision_reference_extractor", vision_reference_extractor_node)
 workflow.add_node("aggregator", aggregator_node)
 
 workflow.add_edge(START, "router")
@@ -217,10 +274,14 @@ workflow.add_conditional_edges(
     route_decision,
     {
         "vision_eval_extractor": "vision_eval_extractor",
+        "vision_syllabus_extractor": "vision_syllabus_extractor",
+        "vision_reference_extractor": "vision_reference_extractor",
         "end": END
     }
 )
 workflow.add_edge("vision_eval_extractor", "aggregator")
+workflow.add_edge("vision_syllabus_extractor", "aggregator")
+workflow.add_edge("vision_reference_extractor", "aggregator")
 workflow.add_edge("aggregator", END)
 
 memory = MemorySaver()
