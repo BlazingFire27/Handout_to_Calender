@@ -25,7 +25,7 @@ llm = ChatOpenAI(
     model_name=MODEL_NAME,
     openai_api_base=API_BASE_URL,
     temperature=0,
-    max_retries=0, 
+    max_retries=1, 
 )
 
 # Vision LLM for table extraction (heavy, multimodal natively)
@@ -34,12 +34,14 @@ if GOOGLE_API_KEY:
         model="gemini-2.5-flash",
         google_api_key=GOOGLE_API_KEY,
         temperature=0,
-        max_retries=3 
+        max_retries=1 
     )
 else:
     vision_llm = None
 
 def extract_course_title(text: str):
+    parser = PydanticOutputParser(pydantic_object=CourseTitle)
+    
     system_message = '''
     Analyze the text to identify the Main Subject or Course Name of this document.
     
@@ -53,6 +55,8 @@ def extract_course_title(text: str):
     Examples:
     - Text: "EEE F211 Electrical Machines" -> Output: "Electrical Machines"
     - Text: "BITS PILANI ... GENERAL BIOLOGY" -> Output: "General Biology"
+    
+    {format_instructions}
     '''
 
     prompt = ChatPromptTemplate.from_messages([
@@ -60,11 +64,12 @@ def extract_course_title(text: str):
         ("human", "{text}"),
     ])
 
-    chain = prompt | llm.with_structured_output(CourseTitle)
+    chain = prompt | llm | parser
 
     try:
         result = chain.invoke({
             "text": text[:3000],
+            "format_instructions": parser.get_format_instructions()
         })
         return result.title
     
