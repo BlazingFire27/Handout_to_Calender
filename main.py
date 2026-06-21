@@ -7,6 +7,7 @@ from src import app, extract_course_title
 OUTPUT_ICS = "Combined_Exam_Schedule.ics"
 file1_path = "Handouts/EM Handout.pdf"
 file2_path = "Handouts/DD Handout_2025_2026.pdf"
+file3_path = "Handouts/EEPE18-Digital Signal Processing.pdf"
 
 def process_pdf(pdf_file):
     if pdf_file is None:
@@ -66,18 +67,32 @@ def process_pdf(pdf_file):
             config = {"configurable": {"thread_id": thread_id}}
 
             result = app.invoke(initial_state, config=config)
+            
             events = result.get("final_schedule", [])
+            syllabus = result.get("syllabus_data", [])
+            refs = result.get("reference_data", [])
+            
             all_events.extend(events)
+            
             if events:
-                print(f"  ✅ Extracted {len(events)} events from Page {page_num}.")
-            else:
-                print(f"  ⏭️ Skipped Page {page_num}.")
+                print(f"  ✅ Extracted {len(events)} Evaluation events from Page {page_num}.")
+            if syllabus:
+                print(f"  ✅ Extracted {len(syllabus)} Syllabus topics from Page {page_num}.")
+            if refs:
+                print(f"  ✅ Extracted {len(refs)} Reference Books from Page {page_num}.")
+                
+            if not events and not syllabus and not refs:
+                print(f"  ⏭️ Skipped Page {page_num} (No relevant data found).")
 
         except Exception as e:
             print(f"  🔥 Error on Page {page_num}: {e}")
         
         end_time = time.time()
         print(f"Time taken: {end_time - start_time:.2f} seconds.\n")
+        
+        # Rate limit prevention (Free Gemini Tier allows 15 RPM)
+        # Since we run 3 parallel vision nodes, we must sleep to prevent 429 Too Many Requests
+        time.sleep(4)
 
     return all_events
 
@@ -96,7 +111,7 @@ def main(pdf_files):
         print("\n❌ No events extracted from any document.")
 
 if __name__ == "__main__":
-    files = [file1_path, file2_path]
+    files = [file1_path, file2_path, file3_path]
     main(files)
 
 
