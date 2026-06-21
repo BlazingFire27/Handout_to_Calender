@@ -38,7 +38,8 @@ def process_pdf(pdf_file):
     course_title_final = ""
     if raw_pages:
         try:
-            title = extract_course_title(raw_pages[0][1]) # Text-based title extraction
+            # Pass text and image for the first page to support Vision Fallback on scanned PDFs
+            title = extract_course_title(text=raw_pages[0][1], image_b64=raw_pages[0][2])
             if title:
                 course_title_final = title
                 print(f"Extracted Course Title: {course_title_final}")
@@ -111,7 +112,7 @@ def main(pdf_files):
         print("\n❌ No events extracted from any document.")
 
 if __name__ == "__main__":
-    files = [file1_path, file2_path, file3_path]
+    files = [file3_path]
     main(files)
 
 
