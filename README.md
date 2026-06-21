@@ -66,12 +66,12 @@ flowchart TD
 
     RouteDecision -- "EVAL" --> VisionEval["eval_extractor_node (Dates & Weights)"]
     RouteDecision -- "SYLLABUS" --> VisionSyllabus["syllabus_extractor_node (Course Topics)"]
-    RouteDecision -- "ADMIN" --> VisionAdmin["admin_extractor_node (Instructors)"]
+    RouteDecision -- "REFERENCES" --> VisionReference["reference_extractor_node (Textbooks)"]
     RouteDecision -- "SKIP" --> END([END])
 
     VisionEval --> AggregatorNode["aggregator_node (Merges Data)"]
     VisionSyllabus --> AggregatorNode
-    VisionAdmin --> AggregatorNode
+    VisionReference --> AggregatorNode
 
     AggregatorNode --> END
 
@@ -79,7 +79,7 @@ flowchart TD
     RouterNode -. "Saves State" .-> Checkpointer
     VisionEval -. "Saves State" .-> Checkpointer
     VisionSyllabus -. "Saves State" .-> Checkpointer
-    VisionAdmin -. "Saves State" .-> Checkpointer
+    VisionReference -. "Saves State" .-> Checkpointer
     AggregatorNode -. "Saves Final State" .-> Checkpointer
 ```
 
@@ -102,6 +102,11 @@ To eliminate LLM date hallucination (e.g., American models confusing DD/MM forma
 To optimize API costs and performance, the LangGraph pipeline is integrated with a `MemorySaver` checkpointer. Every processed PDF page is assigned a unique `thread_id`. By persisting the graph's internal state, we enable LangGraph "Time Travel." This powerful feature allows the application to jump back to the state immediately following the expensive Vision LLM extraction, modify a user preference (e.g., changing the global date format from "DMY" to "MDY"), and mathematically regenerate the exact ICS schedule in **~0.01 seconds**—bypassing LLM API calls entirely.
 
 ![Time Travel Tests Passed](Images/test_memory_saver.png)
+
+### Parallel Multi-Domain Routing (Fan-Out Architecture)
+To support a rich interactive dashboard, the system now features **Multi-Domain Extraction**. Instead of just extracting exam dates, the LangGraph Text Router categorizes each PDF page into multiple domains simultaneously (`EVAL`, `SYLLABUS`, `REFERENCES`). The workflow then uses LangGraph's dynamic list-based routing to seamlessly trigger parallel Vision LLM nodes. This "fan-out" architecture allows us to rapidly extract Course Outlines (for Bunk Limit calculation) and Textbook titles (for Google Books API linking) all at the exact same time!
+
+![Multi-Domain Routing Tests Passed](Images/test_multi_domain_router.png)
 
 ## Procedure to building the model
 ### Data processing
