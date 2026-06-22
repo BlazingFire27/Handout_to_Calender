@@ -1,0 +1,176 @@
+{
+    "courses": [
+        {
+            "course_title": "Digital Signal Processing",
+            "evaluation_scheme": [
+                {
+                    "Subject": "Digital Signal Processing + Miniproject",
+                    "Event_Name": "Miniproject",
+                    "Start_DateTime": "2024-04-22T15:00:00",
+                    "End_DateTime": "2024-04-22T16:30:00",
+                    "Format": "TBA",
+                    "Weightage": "N/A",
+                    "Raw_Time_String": "(3 hours)"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Assessment - Iii & Compensation Assessment",
+                    "Event_Name": "Assessment - Iii & Compensation Assessment",
+                    "Start_DateTime": "29 April - 3 MayT00:00:00",
+                    "End_DateTime": "29 April - 3 MayT23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "N/A",
+                    "Raw_Time_String": "N/A"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Assessment I",
+                    "Event_Name": "Assessment I",
+                    "Start_DateTime": "2024-02-19T00:00:00",
+                    "End_DateTime": "2024-02-19T23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "20%",
+                    "Raw_Time_String": "TBA"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Assessment Ii",
+                    "Event_Name": "Assessment Ii",
+                    "Start_DateTime": "2024-03-25T00:00:00",
+                    "End_DateTime": "2024-03-25T23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "20%",
+                    "Raw_Time_String": "TBA"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Miniproject And Seminar",
+                    "Event_Name": "Miniproject And Seminar",
+                    "Start_DateTime": "2024-04-22T00:00:00",
+                    "End_DateTime": "2024-04-22T23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "20%",
+                    "Raw_Time_String": "TBA"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Compensation Assessment",
+                    "Event_Name": "Compensation Assessment",
+                    "Start_DateTime": "29 April \u2013 3 May 2024T00:00:00",
+                    "End_DateTime": "29 April \u2013 3 May 2024T23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "20%",
+                    "Raw_Time_String": "TBA"
+                },
+                {
+                    "Subject": "\u26a0\ufe0f TIME TBA: Digital Signal Processing + Final Assessment",
+                    "Event_Name": "Final Assessment",
+                    "Start_DateTime": "As per the academic calendarT00:00:00",
+                    "End_DateTime": "As per the academic calendarT23:59:59",
+                    "Format": "TBA",
+                    "Weightage": "40%",
+                    "Raw_Time_String": "TBA"
+                }
+            ],
+            "syllabus_topics": [
+                {
+                    "module_name": "Linearity shift - invariance - Unit sample response characterization - Convolution summation, causality, linear difference equations with constant coefficients and their solution using Z-transform - System function-concept.",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Discrete Fourier Transform and its properties - Circular convolution - Linear convolution of two finite length sequences through circular convolution, Sectioned convolutions-Relationship between Z-transform, Fourier Transform and the Discrete Fourier Transform, Digital filter sampling, Introduction to radix-2 FFT -decimation-in-time and decimation-in-frequency radix-2 algorithm.",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Amplitude and phase response of FIR filters-Linear phase filters - Windowing technique for the design of linear phase FIR filters - Rectangular Hamming and Kaiser windows - Frequency sampling technique - Introduction to optimal filters.",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Properties of IIR digital filters - Design of IIR filters from continuous time filters - Impulse invariance and Bilinear transformation technique - Finite Word Length Effects - Elementary ideas of finite word length effects in digital filters.",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Architecture and features of signal processor and motion controller.",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Discussion on course plan \u2013 Introduction to DSP Course",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Elementary discrete sequences, basic operation on sequences, classification of discrete-time systems \u2013 linear, FIR, causal,",
+                    "number_of_lectures": "N/A"
+                },
+                {
+                    "module_name": "Nyquist sampling theorem, Convolution summation, Unit sample response characterization, Cross and auto correlation",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Linear difference equations with constant coefficients and their solution using Z Transform",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Discrete-time Fourier Transform and its properties, Discrete Fourier Transform,",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Circular Convolution, Linear convolution of two finite length sequences through circular convolution, Sectioned convolutions Relationship between Z-Transform, FT, DTFT and the DFT",
+                    "number_of_lectures": "2 hours"
+                },
+                {
+                    "module_name": "Introduction to radix-2 FFT - decimation-in-time and decimation-in frequency radix-2 algorithm",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Introduction to digital filters, concept of filtering, Amplitude and phase response of Linear phase FIR filters",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Design of FIR Filters - Fourier Series method, windowing techniques",
+                    "number_of_lectures": "2 hours"
+                },
+                {
+                    "module_name": "Frequency sampling techniques, Introduction to optimal filters",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Properties of IIR digital filters, Design of IIR filters from continuous time filters",
+                    "number_of_lectures": "2 hours"
+                },
+                {
+                    "module_name": "Impulse invariance and Bilinear transformation technique",
+                    "number_of_lectures": "1 hour"
+                },
+                {
+                    "module_name": "Frequency transformation techniques, Finite Word Length Effects, Elementary ideas of finite word length effects in digital filters.",
+                    "number_of_lectures": "2 hours"
+                },
+                {
+                    "module_name": "Architecture and features of signal processor Applications",
+                    "number_of_lectures": "3 hours"
+                },
+                {
+                    "module_name": "Miniproject",
+                    "number_of_lectures": "3 hours"
+                }
+            ],
+            "references": [
+                {
+                    "title": "Discrete Time Signal processing",
+                    "author": "Oppenheim and Schaffer"
+                },
+                {
+                    "title": "Digital Signal Processing",
+                    "author": "John G Proakis, Dimitris K Manolakis"
+                },
+                {
+                    "title": "Fundamentals of Digital Signal Processing",
+                    "author": "Ludemann L. C."
+                },
+                {
+                    "title": "Theory and Applications of Digital Signal Processing",
+                    "author": "Rabiner & Gold"
+                },
+                {
+                    "title": "DSP Based Electro Mechanical Motion Control",
+                    "author": "Hamid A.Toliyat and Steven G. Campbell"
+                }
+            ]
+        }
+    ]
+}
