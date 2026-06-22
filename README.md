@@ -108,6 +108,11 @@ To support a rich interactive dashboard, the system now features **Multi-Domain 
 
 ![Multi-Domain Routing Tests Passed](Images/test_multi_domain_router.png)
 
+### Stateless Semester Profile Export (Zero-Database Architecture)
+To maintain a strict privacy-first, zero-database backend, the Aggregator now compiles all the extracted data (Evaluation Events, Syllabus Topics with lecture hours, and Reference Books) across all PDFs into a single, structured `Semester_Profile.json` file inside the `output/` directory. This acts as a portable "Stateless Profile". The user can simply upload this tiny JSON file on their next visit to instantly restore their full dashboard and bunk calculators without needing any expensive LLM API calls.
+
+![Stateless Semester Profile Tests Passed](Images/test_json_output.png)
+
 ## Procedure to building the model
 ### Data processing
 Get the pdfs as input, extract both the pdf text and render the page as an image using PyMuPDF (fitz), returning them simultaneously for the Graph.
