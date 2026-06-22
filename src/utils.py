@@ -3,6 +3,13 @@ from datetime import datetime, timedelta
 import dateparser
 from ics import Calendar, Event
 import arrow
+import requests
+import urllib.parse
+import concurrent.futures
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def predefined(date_raw, time_str, event_name, user_format="DMY"):
     date_clean = date_raw.strip()
@@ -167,3 +174,71 @@ def save_ics(events, filename):
     
     print(f"ICS file saved as {filename}")
 
+def fetch_book_metadata(title, author=""):
+    """Fetches book metadata from Google Books API with a fallback to title-only search."""
+    if not title:
+        return {"thumbnail_url": "", "info_link": ""}
+        
+    def _search(query):
+        api_key = os.getenv("GOOGLE_BOOK_API_KEY")
+        url = f"https://www.googleapis.com/books/v1/volumes?q={urllib.parse.quote(query)}&maxResults=1"
+        if api_key:
+            url += f"&key={api_key}"
+            
+        try:
+            response = requests.get(url, timeout=3)
+            if response.status_code == 200:
+                data = response.json()
+                if "items" in data and len(data["items"]) > 0:
+                    volume_info = data["items"][0].get("volumeInfo", {})
+                    thumbnail = volume_info.get("imageLinks", {}).get("thumbnail", "")
+                    info_link = volume_info.get("infoLink", "")
+                    # Upgrade thumbnail to https if possible
+                    if thumbnail.startswith("http:"):
+                        thumbnail = thumbnail.replace("http:", "https:")
+                    return {"thumbnail_url": thumbnail, "info_link": info_link}
+        except Exception:
+            pass
+        return None
+
+    # Step 1: Search with Title + Author
+    query = f"intitle:{title}"
+    if author and str(author).strip().lower() not in ["n/a", "unknown"]:
+        query += f"+inauthor:{author}"
+        
+    result = _search(query)
+    
+    # Step 2: Fallback to Title only
+    if not result and author:
+        fallback_query = f"intitle:{title}"
+        result = _search(fallback_query)
+        
+    if result:
+        return result
+        
+    return {"thumbnail_url": "", "info_link": ""}
+
+def enrich_refs_parallel(refs):
+    """Takes a list of reference dicts and enriches them with Google Books data in parallel."""
+    if not refs:
+        return
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+        future_to_ref = {
+            executor.submit(fetch_book_metadata, ref.get("title", ""), ref.get("author", "")): ref 
+            for ref in refs
+        }
+        
+        for future in concurrent.futures.as_completed(future_to_ref):
+            ref = future_to_ref[future]
+            try:
+                metadata = future.result()
+                if metadata:
+                    ref["thumbnail_url"] = metadata.get("thumbnail_url", "")
+                    ref["info_link"] = metadata.get("info_link", "")
+                else:
+                    ref["thumbnail_url"] = ""
+                    ref["info_link"] = ""
+            except Exception:
+                ref["thumbnail_url"] = ""
+                ref["info_link"] = ""

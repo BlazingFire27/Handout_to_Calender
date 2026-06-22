@@ -23,11 +23,12 @@ Steps:
    <p align="center">
      <img src="Images/.env_placing.png" alt=".env placing">
    </p>
-2. The file contains four keywords required for the dual-architecture setup:
+2. The file contains five keywords required for the dual-architecture setup:
 - OPENAI_API_KEY (Your OpenRouter Key)
 - OPENAI_API_BASE (Set to https://openrouter.ai/api/v1)
 - MODEL_NAME (Your text router model) 
-- GOOGLE_API_KEY (Your native Google AI Studio Key) </br> </br>
+- GOOGLE_API_KEY (Your native Google AI Studio Key)
+- GOOGLE_BOOK_API_KEY (Dedicated Google Cloud key for parallel metadata fetching) </br> </br>
 NOTE that I have used **openrouter** with **openai/gpt-oss-20b:free** for routing, and Google's native **gemini-2.5-flash** for multimodal vision extraction.
 
 ## NOTE (VERY IMPORTANT):
@@ -112,6 +113,11 @@ To support a rich interactive dashboard, the system now features **Multi-Domain 
 To maintain a strict privacy-first, zero-database backend, the Aggregator now compiles all the extracted data (Evaluation Events, Syllabus Topics with lecture hours, and Reference Books) across all PDFs into a single, structured `Semester_Profile.json` file inside the `output/` directory. This acts as a portable "Stateless Profile". The user can simply upload this tiny JSON file on their next visit to instantly restore their full dashboard and bunk calculators without needing any expensive LLM API calls.
 
 ![Stateless Semester Profile Tests Passed](Images/test_json_output.png)
+
+### Parallel Metadata Enrichment (Google Books API)
+To provide a rich academic experience, the pipeline automatically fetches high-resolution book covers and purchase links for all extracted reference materials. To bypass sequential bottlenecks, this is handled via a `ThreadPoolExecutor` that queries the **Google Books API** concurrently for all books. To prevent impacting the Gemini Vision quota, this feature is completely isolated, using a dedicated `GOOGLE_BOOK_API_KEY` authenticated via Google Cloud Console, effortlessly bypassing the standard unauthenticated IP limit for high-volume stateless usage.
+
+![Parallel Book Fetching Tests Passed](Images/test_google_books.png)
 
 ## Procedure to building the model
 ### Data processing
