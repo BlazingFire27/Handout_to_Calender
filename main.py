@@ -4,14 +4,22 @@ import fitz # PyMuPDF
 from src.utils import save_ics
 from src import app, extract_course_title
 
-OUTPUT_ICS = "Combined_Exam_Schedule.ics"
+import json
+import os
+
+OUTPUT_DIR = "output"
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+OUTPUT_ICS = f"{OUTPUT_DIR}/Combined_Exam_Schedule.ics"
+OUTPUT_JSON = f"{OUTPUT_DIR}/Semester_Profile.json"
+
 file1_path = "Handouts/EM Handout.pdf"
 file2_path = "Handouts/DD Handout_2025_2026.pdf"
 file3_path = "Handouts/EEPE18-Digital Signal Processing.pdf"
 
 def process_pdf(pdf_file):
     if pdf_file is None:
-        return []
+        return "", [], [], []
     
     print(f"Processing PDF: {pdf_file}")
     raw_pages = []
@@ -33,7 +41,7 @@ def process_pdf(pdf_file):
 
     except Exception as e:
         print(f"PDF Processing error: {e}")
-        return None, "Error processing PDF"
+        return "", [], [], []
 
     course_title_final = ""
     if raw_pages:
@@ -51,6 +59,8 @@ def process_pdf(pdf_file):
             print(f"Course Title Extraction error: {e}")
 
     all_events = []
+    all_syllabus = []
+    all_refs = []
 
     for page_num, text, b64_image in raw_pages:
         print(f"Processing Page {page_num}...")
@@ -74,6 +84,8 @@ def process_pdf(pdf_file):
             refs = result.get("reference_data", [])
             
             all_events.extend(events)
+            all_syllabus.extend(syllabus)
+            all_refs.extend(refs)
             
             if events:
                 print(f"  ✅ Extracted {len(events)} Evaluation events from Page {page_num}.")
@@ -95,19 +107,35 @@ def process_pdf(pdf_file):
         # Since we run 3 parallel vision nodes, we must sleep to prevent 429 Too Many Requests
         time.sleep(4)
 
-    return all_events
+    return course_title_final, all_events, all_syllabus, all_refs
 
 def main(pdf_files):
     all_pdf_events = []
+    semester_profile = {"courses": []}
 
     for pdf_file in pdf_files:
-        events = process_pdf(pdf_file)
+        course_title, events, syllabus, refs = process_pdf(pdf_file)
+        
+        course_data = {
+            "course_title": course_title,
+            "evaluation_scheme": events,
+            "syllabus_topics": syllabus,
+            "references": refs
+        }
+        semester_profile["courses"].append(course_data)
+        
         if events:
             all_pdf_events.extend(events)
 
+    # Save JSON Profile
+    with open(OUTPUT_JSON, "w", encoding="utf-8") as f:
+        json.dump(semester_profile, f, indent=4)
+    print(f"\n🎉 Successfully created {OUTPUT_JSON} with {len(semester_profile['courses'])} courses!")
+
+    # Save ICS Calendar
     if all_pdf_events:
         save_ics(all_pdf_events, OUTPUT_ICS)
-        print(f"\n🎉 Successfully created {OUTPUT_ICS} with {len(all_pdf_events)} events!")
+        print(f"🎉 Successfully created {OUTPUT_ICS} with {len(all_pdf_events)} events!")
     else:
         print("\n❌ No events extracted from any document.")
 
