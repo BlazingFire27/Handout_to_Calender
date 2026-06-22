@@ -1,0 +1,126 @@
+{
+    "courses": [
+        {
+            "course_title": "Data Structures",
+            "evaluation_scheme": [
+                {
+                    "Event_Name": "Midsem",
+                    "Start_DateTime": "2024-10-15T10:00:00"
+                }
+            ],
+            "syllabus_topics": [
+                {
+                    "module_name": "Trees",
+                    "number_of_lectures": "4"
+                }
+            ],
+            "references": [
+                {
+                    "title": "CLRS",
+                    "author": "Cormen"
+                }
+            ]
+        },
+        {
+            "course_title": "Operating Systems",
+            "evaluation_scheme": [
+                {
+                    "Event_Name": "Quiz 1",
+                    "Start_DateTime": "2024-09-01T10:00:00"
+                }
+            ],
+            "syllabus_topics": [],
+            "references": []
+        },
+        {
+            "course_title": "Linear Algebra",
+            "evaluation_scheme": [],
+            "syllabus_topics": [
+                {
+                    "module_name": "Matrix Multiplication",
+                    "number_of_lectures": "2"
+                }
+            ],
+            "references": []
+        },
+        {
+            "course_title": "Unknown Course",
+            "evaluation_scheme": [],
+            "syllabus_topics": [],
+            "references": []
+        },
+        {
+            "course_title": "Machine Learning",
+            "evaluation_scheme": [
+                {
+                    "Event_Name": "Final",
+                    "Start_DateTime": "2024-12-15T10:00:00"
+                }
+            ],
+            "syllabus_topics": [
+                {
+                    "module_name": "Module 1",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 2",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 3",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 4",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 5",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 6",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 7",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 8",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 9",
+                    "number_of_lectures": "1"
+                },
+                {
+                    "module_name": "Module 10",
+                    "number_of_lectures": "1"
+                }
+            ],
+            "references": [
+                {
+                    "title": "Book 1",
+                    "author": "Author"
+                },
+                {
+                    "title": "Book 2",
+                    "author": "Author"
+                },
+                {
+                    "title": "Book 3",
+                    "author": "Author"
+                },
+                {
+                    "title": "Book 4",
+                    "author": "Author"
+                },
+                {
+                    "title": "Book 5",
+                    "author": "Author"
+                }
+            ]
+        }
+    ]
+}
