@@ -60,6 +60,8 @@ This flowchart represents the finalized architecture that is actively being buil
 ```mermaid
 flowchart TD
     Checkpointer[(MemorySaver State Persistence)]
+    GoogleBooks((Google Books API))
+    JSONOut[[Semester_Profile.json]]
 
     START([START]) --> RouterNode["router_node (Classifies text)"]
 
@@ -74,7 +76,10 @@ flowchart TD
     VisionSyllabus --> AggregatorNode
     VisionReference --> AggregatorNode
 
-    AggregatorNode --> END
+    AggregatorNode --> PostProcess{"enrich_refs_parallel()"}
+    PostProcess -. "Fetches Covers & Links" .-> GoogleBooks
+    PostProcess --> JSONOut
+    JSONOut --> END
 
     %% Checkpointer connections to show state saving
     RouterNode -. "Saves State" .-> Checkpointer
