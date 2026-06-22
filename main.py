@@ -1,7 +1,7 @@
 import time
 import base64
 import fitz # PyMuPDF
-from src.utils import save_ics
+from src.utils import save_ics, enrich_refs_parallel
 from src import app, extract_course_title
 
 import json
@@ -85,7 +85,11 @@ def process_pdf(pdf_file):
             
             all_events.extend(events)
             all_syllabus.extend(syllabus)
-            all_refs.extend(refs)
+            
+            # Enrich References with Google Books API concurrently
+            if refs:
+                enrich_refs_parallel(refs)
+                all_refs.extend(refs)
             
             if events:
                 print(f"  ✅ Extracted {len(events)} Evaluation events from Page {page_num}.")
