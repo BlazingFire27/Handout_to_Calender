@@ -109,7 +109,8 @@ def process_pdf(pdf_file):
         
         # Rate limit prevention (Free Gemini Tier allows 15 RPM)
         # Since we run 3 parallel vision nodes, we must sleep to prevent 429 Too Many Requests
-        time.sleep(4)
+        # UNCOMMENT THE FOLLOWING LINE IF RUNNING ON FREE GOOGLE AI STUDIO TIER
+        # time.sleep(4)
 
     return course_title_final, all_events, all_syllabus, all_refs
 
