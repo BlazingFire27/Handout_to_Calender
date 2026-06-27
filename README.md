@@ -23,13 +23,12 @@ Steps:
    <p align="center">
      <img src="Images/.env_placing.png" alt=".env placing">
    </p>
-2. The file contains five keywords required for the dual-architecture setup:
-- OPENAI_API_KEY (Your OpenRouter Key)
-- OPENAI_API_BASE (Set to https://openrouter.ai/api/v1)
-- MODEL_NAME (Your text router model) 
-- GOOGLE_API_KEY (Your native Google AI Studio Key)
+2. The file contains two keywords required for the unified AIgateway architecture:
+- AIGATEWAY_API_KEY (Your AIgateway API Key)
 - GOOGLE_BOOK_API_KEY (Dedicated Google Cloud key for parallel metadata fetching) </br> </br>
-NOTE that I have used **openrouter** with **openai/gpt-oss-20b:free** for routing, and Google's native **gemini-2.5-flash** for multimodal vision extraction.
+NOTE that we use **aigateway.sh** with **openai/gpt-oss-20b** for routing, and **google/gemini-2.5-flash-lite** for multimodal vision extraction.
+
+*If you are running this locally on the free tier without an AIgateway account, you can use the commented out fallback block in `src/graph.py` which requires `GOOGLE_API_KEY` and `OPENAI_API_KEY`.*
 
 ## NOTE (VERY IMPORTANT):
 - Make sure to use virtual environment so that the modules used in this particular project doesn't affect other projects
