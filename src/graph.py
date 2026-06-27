@@ -1,7 +1,7 @@
 import os
 
 from langchain_openai import ChatOpenAI
-from langchain_google_genai import ChatGoogleGenerativeAI
+# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.messages import HumanMessage
@@ -20,24 +20,50 @@ except ImportError:
     MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
     GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# ------------------------------------------------------------------
+# [AIgateway.sh Production Architecture]
+# ------------------------------------------------------------------
+AIGATEWAY_API_KEY = os.getenv("AIGATEWAY_API_KEY")
+
 # Text LLM for routing (fast, cheap)
 llm = ChatOpenAI(
-    model_name=MODEL_NAME,
-    openai_api_base=API_BASE_URL,
+    model_name="openai/gpt-oss-20b",
+    openai_api_base="https://api.aigateway.sh/v1",
+    openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
-    max_retries=5, 
+    max_retries=3, 
 )
 
 # Vision LLM for table extraction (heavy, multimodal natively)
-if GOOGLE_API_KEY:
-    vision_llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=GOOGLE_API_KEY,
-        temperature=0,
-        max_retries=5 
-    )
-else:
-    vision_llm = None
+vision_llm = ChatOpenAI(
+    model_name="google/gemini-2.5-flash-lite",
+    openai_api_base="https://api.aigateway.sh/v1",
+    openai_api_key=AIGATEWAY_API_KEY,
+    temperature=0,
+    max_retries=3 
+)
+
+# ------------------------------------------------------------------
+# [Local Free-Tier / OpenRouter + Google Native Fallback]
+# UNCOMMENT THE FOLLOWING BLOCK IF RUNNING LOCALLY WITHOUT AIGATEWAY
+# ------------------------------------------------------------------
+# llm = ChatOpenAI(
+#     model_name=MODEL_NAME,
+#     openai_api_base=API_BASE_URL,
+#     temperature=0,
+#     max_retries=5, 
+# )
+# 
+# if GOOGLE_API_KEY:
+#     # vision_llm = ChatGoogleGenerativeAI(
+#     #     model="gemini-2.5-flash",
+#     #     google_api_key=GOOGLE_API_KEY,
+#     #     temperature=0,
+#     #     max_retries=5 
+#     # )
+#     pass
+# else:
+#     vision_llm = None
 
 def extract_course_title(text: str, image_b64: str = ""):
     parser = PydanticOutputParser(pydantic_object=CourseTitle)
