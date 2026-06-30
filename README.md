@@ -37,7 +37,7 @@ Steps:
 1. The `.env` file must be placed in the root directory of this project like shown below
 
    <p align="center">
-     <img src="Images/.env_placing.png" alt=".env placing">
+     <img src="Images/.env_placing1.png" alt=".env placing">
    </p>
 2. The file contains two keywords required for the unified AIgateway architecture:
 - AIGATEWAY_API_KEY (Your AIgateway API Key)
