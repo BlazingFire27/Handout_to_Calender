@@ -10,7 +10,7 @@ from langgraph.graph import StateGraph, END, START
 from langgraph.checkpoint.memory import MemorySaver
 
 from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
-from src.utils import normalize_event_name, clean_subject_key, predefined
+from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_parallel
 
 try:
     from src.config import API_KEY, API_BASE_URL, MODEL_NAME, GOOGLE_API_KEY
@@ -36,7 +36,7 @@ llm = ChatOpenAI(
 
 # Vision LLM for table extraction (heavy, multimodal natively)
 vision_llm = ChatOpenAI(
-    model_name="google/gemini-2.5-flash-lite",
+    model_name="google/gemma-4-26b-a4b-it",
     openai_api_base="https://api.aigateway.sh/v1",
     openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
@@ -326,6 +326,12 @@ def route_decision(state: State) -> list[str]:
         return ["end"]
     return dests
 
+def post_process_node(state: State):
+    refs = state.get("reference_data", [])
+    if refs:
+        enrich_refs_parallel(refs)
+    return {"reference_data": refs}
+
 # GRAPH NOW
 workflow = StateGraph(State)
 
@@ -334,6 +340,7 @@ workflow.add_node("vision_eval_extractor", vision_eval_extractor_node)
 workflow.add_node("vision_syllabus_extractor", vision_syllabus_extractor_node)
 workflow.add_node("vision_reference_extractor", vision_reference_extractor_node)
 workflow.add_node("aggregator", aggregator_node)
+workflow.add_node("post_process", post_process_node)
 
 workflow.add_edge(START, "router")
 workflow.add_conditional_edges(
@@ -349,7 +356,8 @@ workflow.add_conditional_edges(
 workflow.add_edge("vision_eval_extractor", "aggregator")
 workflow.add_edge("vision_syllabus_extractor", "aggregator")
 workflow.add_edge("vision_reference_extractor", "aggregator")
-workflow.add_edge("aggregator", END)
+workflow.add_edge("aggregator", "post_process")
+workflow.add_edge("post_process", END)
 
 memory = MemorySaver()
 app = workflow.compile(checkpointer=memory)
