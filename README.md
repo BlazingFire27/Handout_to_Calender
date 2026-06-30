@@ -33,18 +33,39 @@ Modules used:
 3. Api cost management
 
 ## .env contents:
-Steps:
-1. The `.env` file must be placed in the root directory of this project like shown below
+The `.env` file must be placed in the root directory of this project like shown below
 
    <p align="center">
      <img src="Images/.env_placing1.png" alt=".env placing">
    </p>
-2. The file contains two keywords required for the unified AIgateway architecture:
-- AIGATEWAY_API_KEY (Your AIgateway API Key)
-- GOOGLE_BOOK_API_KEY (Dedicated Google Cloud key for parallel metadata fetching) </br> </br>
-NOTE that we use **aigateway.sh** with **openai/gpt-oss-20b** for routing, and **google/gemini-2.5-flash-lite** for multimodal vision extraction.
 
-*If you are running this locally on the free tier without an AIgateway account, you can use the commented out fallback block in `src/graph.py` which requires `GOOGLE_API_KEY` and `OPENAI_API_KEY`.*
+
+**Case 1.1: Free Tier ONLY**
+Uses `gpt-oss-20b` (free via OpenRouter) for text routing and `gemini-2.5-flash` (via native Google AI Studio) for vision.
+```env
+OPENAI_API_KEY=your_key
+OPENAI_API_BASE=https://openrouter.ai/api/v1
+GOOGLE_API_KEY=your_key
+GOOGLE_BOOK_API_KEY=your_key
+ENVIRONMENT=development
+```
+
+**Case 1.2: Deployed (OpenRouter $5 Budget)**
+Uses both text and vision models via OpenRouter to simplify API management.
+```env
+OPENAI_API_KEY=your_key
+OPENAI_API_BASE=https://openrouter.ai/api/v1
+GOOGLE_BOOK_API_KEY=your_key
+ENVIRONMENT=production
+```
+
+**Case 1.3: AIGateway ONLY (Current Promo)**
+Uses explicitly allowed free multimodal models (e.g., `google/gemma-4-26b-a4b-it`) via AIGateway.
+```env
+AIGATEWAY_API_KEY=your_key
+GOOGLE_BOOK_API_KEY=your_key
+ENVIRONMENT=development
+```
 
 ## NOTE (VERY IMPORTANT):
 - Make sure to use virtual environment so that the modules used in this particular project doesn't affect other projects
@@ -60,14 +81,13 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 - RUN THE **REQUIREMENTS.TXT** FILE TO DOWNLOAD ALL THE REQUIRED MODULES using `pip install -r requirements.txt`
 
 ## Project Overview
-- The core of the project is to automate the process of finding the exam dates, convert into ics file which can be used in adding them to calender. </br>
-- The python file is included in this repository provides a detailed walkthrough of the model implementation. </br>
-- The multimodal graph takes multiple handout pdfs as input, processing them page by page. It simultaneously extracts the raw text and renders the page as a Base64 Image. </br>
+This project is a high-performance backend API built with **FastAPI** and **LangGraph**. It automates the extraction of schedules, syllabi, and references from University Course Handout PDFs.
 
-- The **Router Node** (Text-based) analyzes the page text and outputs a command to either "extract" the contents of this page or "skip" it.
-- This is because the evaluation components of the course will be provided in any one of the pages and we don't need to waste compute power by checking for all the pages.
-- The **Vision Eval Extractor Node** (Multimodal-based) takes over if an evaluation scheme is detected. It takes the *Image* of the page and natively extracts complex tables, fetching the Date, Time, Format (Open/Closed Book), and Weightage simultaneously.
-- The **Aggregator Node** combines the perfect JSON results obtained from the vision model and processes complex date logic into ISO formats before merging them.
+- **FastAPI Layer:** Receives the uploaded PDF and securely handles rate-limiting (`20/day` via `slowapi`).
+- **LangGraph Multi-Agent Pipeline:**
+  - **Router Node (Text):** Quickly analyzes raw PDF text to classify the page, skipping irrelevant pages to save compute.
+  - **Vision Extractor Nodes:** If the page contains an Evaluation Scheme, Syllabus, or References, a Multimodal Vision model extracts the complex tables directly from a Base64 image of the page.
+  - **Aggregator Node:** Processes date logic mathematically via `dateparser` and structures the final unified JSON response.
 
 ### Planned Upgraded Architecture
 This flowchart represents the finalized architecture that is actively being built. It introduces parallel vision extraction (for handling syllabus and admin data simultaneously) and a robust `MemorySaver` checkpointer for state persistence and fallback capabilities.
