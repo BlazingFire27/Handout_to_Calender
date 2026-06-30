@@ -183,7 +183,7 @@ for i in range(len(doc)):
     
     raw_pages.append((i+1, text, b64_image))
 ```
-Code Credits = Thank you [https://github.com/jsvine/pdfplumber](https://github.com/jsvine/pdfplumber)
+Code Credits = Thank you [https://github.com/pymupdf/PyMuPDF](https://github.com/pymupdf/PyMuPDF)
 
 ### Data extraction
 - From the first page, always extract the **course title** and have it as global variable until the entire pdf is processed
