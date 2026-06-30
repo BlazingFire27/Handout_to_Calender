@@ -17,7 +17,7 @@ file1_path = "Handouts/EM Handout.pdf"
 file2_path = "Handouts/DD Handout_2025_2026.pdf"
 file3_path = "Handouts/EEPE18-Digital Signal Processing.pdf"
 
-def process_pdf(pdf_file):
+def process_pdf(pdf_file, user_date_format="DMY"):
     if pdf_file is None:
         return "", [], [], []
     
@@ -69,7 +69,8 @@ def process_pdf(pdf_file):
             initial_state = {
                 'raw_text': text,
                 'page_image_b64': b64_image,
-                'known_course_title': course_title_final
+                'known_course_title': course_title_final,
+                'user_date_format': user_date_format
             }
 
             import os
