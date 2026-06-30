@@ -8,3 +8,7 @@ python-dotenv
 pymupdf
 langchain-google-genai
 dateparser
+fastapi
+uvicorn
+slowapi
+python-multipart

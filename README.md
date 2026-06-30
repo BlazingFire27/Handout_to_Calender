@@ -11,6 +11,22 @@ Modules used:
 5. Datetime and Pydantic (BaseModel and Field)
 4. _Gradio User Interface (SOON...)_
 
+## Folder Structure
+```text
+📦 Handout To Calender
+ ┣ 📂 backend/
+ ┃ ┣ 📂 Handouts/        # Test PDFs
+ ┃ ┣ 📂 src/             # LangGraph Core Logic
+ ┃ ┣ 📂 tests/           # Pytest API & Unit Tests
+ ┃ ┣ 📜 api.py           # FastAPI Server Entrypoint
+ ┃ ┣ 📜 main.py          # Legacy PDF Processor
+ ┃ ┗ 📜 requirements.txt # Python Dependencies
+ ┣ 📂 frontend/          # (Planned) Next.js Dashboard
+ ┣ 📂 Images/            # Documentation Assets
+ ┣ 📜 .env               # API Keys
+ ┗ 📜 README.md
+```
+
 ## Future ideas:
 1. Gradio UI implementation
 2. Hosting in Huggingface
@@ -97,6 +113,11 @@ To ensure high accuracy in classifying document pages and routing them efficient
 We implemented a secondary dedicated test script (`test_vision.py`) specifically for the newly introduced **Vision Eval Extractor Node**. This ensures that the native Gemini Multimodal API perfectly transcribes complex tables containing spanned/merged cells and confusing date formats from the image without breaking existing text logic.
 
 ![Vision Node Tests Passed](Images/test_vision-text_hybrid_passed.png)
+
+### AIGateway Multimodal Verification
+To validate the **Zero-Cost Hybrid Architecture** for the current development phase, we rigorously tested `google/gemma-4-26b-a4b-it` via AIGateway. The script successfully extracted Base64 image payloads from PDFs, proving the model's multimodal capabilities on the free tier.
+
+![AIGateway Vision Test](Images/test_aigateway.png)
 
 ### Deterministic Date Parsing (Bias Correction)
 To eliminate LLM date hallucination (e.g., American models confusing DD/MM formats), the extraction and formatting steps have been entirely decoupled. The Vision Node now only extracts the raw text snippet (e.g., `'11/10/25'`). The Aggregator Node then utilizes the deterministic Python `dateparser` library, anchored to the current academic year, to calculate the correct ISO timestamp mathematically based on a global user preference (`user_date_format: "DMY"` vs `"MDY"`).
