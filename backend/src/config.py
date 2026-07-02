@@ -1,13 +1,8 @@
 import os
-from dotenv import load_dotenv
 
-load_dotenv()
-
-API_KEY = os.getenv("OPENAI_API_KEY")
-API_BASE_URL = os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1")
-MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
-
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
-
-if not API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set in environment variables.")
+# Using os.environ.get() explicitly as requested, bypassing local .env files
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+GOOGLE_BOOK_API_KEY = os.environ.get("GOOGLE_BOOK_API_KEY")
+AIGATEWAY_API_KEY = os.environ.get("AIGATEWAY_API_KEY")
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
