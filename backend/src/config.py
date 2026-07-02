@@ -1,5 +1,10 @@
 import os
 
+# Optional: If you want to use a local .env file instead of system variables, 
+# uncomment the two lines below (make sure you have installed python-dotenv).
+# from dotenv import load_dotenv
+# load_dotenv()
+
 # Using os.environ.get() explicitly as requested, bypassing local .env files
 OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
