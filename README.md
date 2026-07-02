@@ -174,6 +174,9 @@ entry = {
 ## Note: 
 User can input multiple pdfs at once
 
+## OUTPUT UI
+![Working Model](Images/working_model_1.png)
+
 ## OUTPUT CLI
 ![CLI OUTPUT](Images/output.png)
 
