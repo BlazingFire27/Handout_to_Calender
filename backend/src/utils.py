@@ -1,6 +1,7 @@
 import re
 from datetime import datetime, timedelta
 import dateparser
+from dateparser.search import search_dates
 from ics import Calendar, Event
 import arrow
 import requests
@@ -16,15 +17,26 @@ def predefined(date_raw, time_str, event_name, user_format="DMY"):
     date_iso = date_clean
 
     # Use deterministic dateparser with user preference to eliminate bias
-    # Anchor relative parsing to Jan 1, 2025 to correctly resolve "25" as 2025 instead of 2125
     base_date = datetime(2025, 1, 1)
-    date_obj = dateparser.parse(
-        date_clean, 
+    
+    # Use search_dates to extract dates buried in text (e.g. "Tentative- 15th Nov")
+    found_dates = search_dates(
+        date_clean,
         settings={'DATE_ORDER': user_format, 'RELATIVE_BASE': base_date}
     )
     
-    if date_obj:
+    if found_dates:
+        # search_dates returns a list of tuples: [("substring", datetime_obj)]
+        date_obj = found_dates[0][1]
         date_iso = date_obj.strftime("%Y-%m-%d")
+    else:
+        # Fallback to direct parse
+        date_obj = dateparser.parse(
+            date_clean, 
+            settings={'DATE_ORDER': user_format, 'RELATIVE_BASE': base_date}
+        )
+        if date_obj:
+            date_iso = date_obj.strftime("%Y-%m-%d")
     
     event_lower = normalize_event_name(event_name).lower()
     time_clean = time_str.strip().upper()
@@ -118,14 +130,9 @@ def clean_subject_key(sub_name):
     return sub_name.lower().split('(')[0].strip()
 
 def normalize_event_name(event_name):
-    name = event_name.lower().strip()
-
-    if any(x in name for x in ['compre', 'final exam', 'end sem', 'finals']):
-        return "Comprehensive Exam"
-    if any(x in name for x in ["midsem", "mid-sem", "mid sem"]):
-        return "MidSem Exam"
-
-    return event_name.title()
+    # Simply return the title-cased name to prevent over-aggressive normalization 
+    # and generalize perfectly to all Indian colleges based on raw AI extraction.
+    return event_name.strip().title()
 
 # THANK YOU GEMINI FOR TO_24H FUNCTION CODE AND IDEA TO USE THIS
 def to_24h(h, is_pm):
