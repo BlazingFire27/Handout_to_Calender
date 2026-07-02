@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 # Add the parent directory to sys.path so we can import from src
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -121,7 +122,6 @@ def run_tests():
         print("-" * 60)
         
         # Add a delay between tests to prevent hitting Free Tier burst rate limits
-        import time
         time.sleep(4)
 
 if __name__ == "__main__":
