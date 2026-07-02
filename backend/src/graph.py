@@ -1,4 +1,5 @@
 import os
+import concurrent.futures
 
 from langchain_openai import ChatOpenAI
 # from langchain_google_genai import ChatGoogleGenerativeAI
@@ -12,58 +13,77 @@ from langgraph.checkpoint.memory import MemorySaver
 from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
 from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_parallel
 
-try:
-    from src.config import API_KEY, API_BASE_URL, MODEL_NAME, GOOGLE_API_KEY
-except ImportError:
-    API_KEY = os.getenv("OPENAI_API_KEY")
-    API_BASE_URL = os.getenv("OPENAI_API_BASE", "https://openrouter.ai/api/v1")
-    MODEL_NAME = os.getenv("MODEL_NAME", "google/gemini-2.0-flash-exp:free")
-    GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+from src.config import OPENAI_API_KEY, GOOGLE_API_KEY, AIGATEWAY_API_KEY
+from langchain_google_genai import ChatGoogleGenerativeAI
 
-# ------------------------------------------------------------------
-# [AIgateway.sh Production Architecture]
-# ------------------------------------------------------------------
-AIGATEWAY_API_KEY = os.getenv("AIGATEWAY_API_KEY")
+# ==============================================================================
+# ARCHITECTURE CONFIGURATION (As defined in README.md)
+# ==============================================================================
 
-# Text LLM for routing (fast, cheap)
+# ------------------------------------------------------------------------------
+# CASE 1: Full Free Tier
+# Text: gpt-oss-20b (OpenRouter Free)
+# Vision: gemini-2.5-flash (Google AI Studio Free)
+# ------------------------------------------------------------------------------
+# llm = ChatOpenAI(
+#     model_name="openai/gpt-oss-20b",
+#     openai_api_base="https://openrouter.ai/api/v1",
+#     openai_api_key=OPENAI_API_KEY,
+#     temperature=0,
+#     max_retries=3, 
+# )
+# 
+# vision_llm = ChatGoogleGenerativeAI(
+#     model="gemini-2.5-flash",
+#     google_api_key=GOOGLE_API_KEY,
+#     temperature=0,
+#     max_retries=5 
+# )
+
+# ------------------------------------------------------------------------------
+# CASE 2: Production
+# Text: gpt-oss-20b (OpenRouter)
+# Vision: google/gemini-2.5-flash (OpenRouter ONLY)
+# ------------------------------------------------------------------------------
+# llm = ChatOpenAI(
+#     model_name="openai/gpt-oss-20b",
+#     openai_api_base="https://openrouter.ai/api/v1",
+#     openai_api_key=OPENAI_API_KEY,
+#     temperature=0,
+#     max_retries=3, 
+# )
+# 
+# vision_llm = ChatOpenAI(
+#     model_name="google/gemini-2.5-flash",
+#     openai_api_base="https://openrouter.ai/api/v1",
+#     openai_api_key=OPENAI_API_KEY,
+#     temperature=0,
+#     max_retries=3 
+# )
+
+# ------------------------------------------------------------------------------
+# CASE 3: Development / Testing (ACTIVE)
+# Text & Vision: google/gemma-4-26b-a4b-it (AIGateway ONLY Promo)
+# ------------------------------------------------------------------------------
 llm = ChatOpenAI(
-    model_name="openai/gpt-oss-20b",
+    model_name="google/gemma-4-26b-a4b-it",
     openai_api_base="https://api.aigateway.sh/v1",
     openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
     max_retries=3, 
+    request_timeout=300.0,
 )
 
-# Vision LLM for table extraction (heavy, multimodal natively)
 vision_llm = ChatOpenAI(
     model_name="google/gemma-4-26b-a4b-it",
     openai_api_base="https://api.aigateway.sh/v1",
     openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
-    max_retries=3 
+    max_retries=3,
+    request_timeout=300.0,
 )
+# ==============================================================================
 
-# ------------------------------------------------------------------
-# [Local Free-Tier / OpenRouter + Google Native Fallback]
-# UNCOMMENT THE FOLLOWING BLOCK IF RUNNING LOCALLY WITHOUT AIGATEWAY
-# ------------------------------------------------------------------
-# llm = ChatOpenAI(
-#     model_name=MODEL_NAME,
-#     openai_api_base=API_BASE_URL,
-#     temperature=0,
-#     max_retries=5, 
-# )
-# 
-# if GOOGLE_API_KEY:
-#     # vision_llm = ChatGoogleGenerativeAI(
-#     #     model="gemini-2.5-flash",
-#     #     google_api_key=GOOGLE_API_KEY,
-#     #     temperature=0,
-#     #     max_retries=5 
-#     # )
-#     pass
-# else:
-#     vision_llm = None
 
 def extract_course_title(text: str, image_b64: str = ""):
     parser = PydanticOutputParser(pydantic_object=CourseTitle)
@@ -314,17 +334,51 @@ def vision_reference_extractor_node(state: State):
         print(f"Reference extractor error= {e}")
         return {"reference_data": []}
 
-def route_decision(state: State) -> list[str]:
+def vision_orchestrator_node(state: State):
     categories = state.get("classification", [])
-    dests = []
     
-    if "EVAL" in categories: dests.append("vision_eval_extractor")
-    if "SYLLABUS" in categories: dests.append("vision_syllabus_extractor")
-    if "REFERENCES" in categories: dests.append("vision_reference_extractor")
+    futures = {}
+    results = {
+        "eval_data": [],
+        "syllabus_data": [],
+        "reference_data": []
+    }
     
-    if not dests:
-        return ["end"]
-    return dests
+    if not categories or "SKIP" in categories:
+        return results
+        
+    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        if "EVAL" in categories:
+            futures["EVAL"] = executor.submit(vision_eval_extractor_node, state)
+        if "SYLLABUS" in categories:
+            futures["SYLLABUS"] = executor.submit(vision_syllabus_extractor_node, state)
+        if "REFERENCES" in categories:
+            futures["REFERENCES"] = executor.submit(vision_reference_extractor_node, state)
+            
+        for cat, future in futures.items():
+            try:
+                res = future.result()
+                if cat == "EVAL":
+                    results["eval_data"] = res.get("eval_data", [])
+                elif cat == "SYLLABUS":
+                    results["syllabus_data"] = res.get("syllabus_data", [])
+                elif cat == "REFERENCES":
+                    results["reference_data"] = res.get("reference_data", [])
+            except Exception as e:
+                print(f"Orchestrator error in {cat}: {e}")
+                
+    return results
+
+def route_decision(state: State) -> str:
+    categories = state.get("classification", [])
+    
+    if "SKIP" in categories or not categories:
+        return "end"
+        
+    if any(c in categories for c in ["EVAL", "SYLLABUS", "REFERENCES"]):
+        return "vision_orchestrator"
+        
+    return "end"
 
 def post_process_node(state: State):
     refs = state.get("reference_data", [])
@@ -336,9 +390,7 @@ def post_process_node(state: State):
 workflow = StateGraph(State)
 
 workflow.add_node("router", router_node)
-workflow.add_node("vision_eval_extractor", vision_eval_extractor_node)
-workflow.add_node("vision_syllabus_extractor", vision_syllabus_extractor_node)
-workflow.add_node("vision_reference_extractor", vision_reference_extractor_node)
+workflow.add_node("vision_orchestrator", vision_orchestrator_node)
 workflow.add_node("aggregator", aggregator_node)
 workflow.add_node("post_process", post_process_node)
 
@@ -347,15 +399,11 @@ workflow.add_conditional_edges(
     "router",
     route_decision,
     {
-        "vision_eval_extractor": "vision_eval_extractor",
-        "vision_syllabus_extractor": "vision_syllabus_extractor",
-        "vision_reference_extractor": "vision_reference_extractor",
+        "vision_orchestrator": "vision_orchestrator",
         "end": END
     }
 )
-workflow.add_edge("vision_eval_extractor", "aggregator")
-workflow.add_edge("vision_syllabus_extractor", "aggregator")
-workflow.add_edge("vision_reference_extractor", "aggregator")
+workflow.add_edge("vision_orchestrator", "aggregator")
 workflow.add_edge("aggregator", "post_process")
 workflow.add_edge("post_process", END)
 
