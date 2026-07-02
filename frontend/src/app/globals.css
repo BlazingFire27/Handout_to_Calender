@@ -49,10 +49,10 @@
 }
 
 :root {
-  /* Warm yellowish-white background, deep violet primary */
-  --background: oklch(0.99 0.01 90);
+  /* Warm yellowish-white background, pure white card for contrast */
+  --background: oklch(0.97 0.01 90);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(0.99 0.01 90);
+  --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(0.99 0.01 90);
   --popover-foreground: oklch(0.145 0 0);
@@ -85,10 +85,10 @@
 }
 
 .dark {
-  /* Pitch black background, glowing neon violet primary */
+  /* Pitch black background, slightly elevated gray for cards */
   --background: oklch(0.1 0 0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.15 0 0);
+  --card: oklch(0.16 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.15 0 0);
   --popover-foreground: oklch(0.985 0 0);

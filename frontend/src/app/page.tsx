@@ -23,7 +23,7 @@ export default function Home() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mt-8">
           {/* Option 1 */}
           <Card 
-            className="hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer flex flex-col justify-center text-center p-6 group h-full"
+            className="hover:border-primary/50 hover:bg-primary/10 dark:hover:bg-primary/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-center text-center p-6 group h-full"
             onClick={() => setView("upload-json")}
           >
             <CardHeader>
@@ -39,7 +39,7 @@ export default function Home() {
 
           {/* Option 2 */}
           <Card 
-            className="hover:border-primary/50 hover:shadow-lg transition-all cursor-pointer flex flex-col justify-center text-center p-6 group h-full"
+            className="hover:border-primary/50 hover:bg-primary/10 dark:hover:bg-primary/20 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 cursor-pointer flex flex-col justify-center text-center p-6 group h-full"
             onClick={() => setView("upload-pdf")}
           >
             <CardHeader>
