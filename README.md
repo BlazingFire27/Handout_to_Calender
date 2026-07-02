@@ -4,12 +4,12 @@ The project leverages the LangGraph, OpenAI wrapper etc to create the bot.
 
 ## Technologies
 Modules used:
-1. LangGraph (for StateGraph)
-2. langchain_openai (for OpenRouter wrapper)
-3. langchain_google_genai (for Google Gemini native wrapper)
-4. PyMuPDF (fitz) for PDF-to-Image rendering
-5. Datetime and Pydantic (BaseModel and Field)
-4. _Gradio User Interface (SOON...)_
+1. LangGraph (for StateGraph & Multi-Agent Orchestration)
+2. FastAPI (for Backend Server)
+3. Next.js & Tailwind CSS (for Frontend Dashboard)
+4. langchain_openai & langchain_google_genai (for LLM routing and Vision extraction)
+5. PyMuPDF (fitz) for PDF-to-Image rendering
+6. Datetime, Pydantic, and dateparser (for mathematical date scheduling)
 
 ## Folder Structure
 ```text
@@ -28,9 +28,9 @@ Modules used:
 ```
 
 ## Future ideas:
-1. Gradio UI implementation
-2. Hosting in Huggingface
-3. Api cost management
+1. Deployment & Hosting
+2. Testing & QA
+3. API cost management
 
 ## .env contents:
 The `.env` file must be placed in the root directory of this project like shown below
@@ -38,6 +38,16 @@ The `.env` file must be placed in the root directory of this project like shown 
    <p align="center">
      <img src="Images/.env_placing1.png" alt=".env placing">
    </p>
+   
+## Environment Variables (.env)
+By default, the backend (`backend/src/config.py`) expects these keys to be set as **System Environment Variables**. 
+
+However, if you want to use a `.env` file directly in the project folder (for local development without system vars), simply go to `backend/src/config.py` and uncomment the `dotenv` lines:
+```python
+# from dotenv import load_dotenv
+# load_dotenv()
+```
+*Note: Make sure to run `pip install python-dotenv` if you choose to use local env files!*
 
 
 **Case 1.1: Free Tier ONLY**
