@@ -6,6 +6,8 @@ from src import app, extract_course_title
 
 import json
 import os
+import asyncio
+import uuid
 
 OUTPUT_DIR = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -73,7 +75,6 @@ def process_pdf(pdf_file, user_date_format="DMY"):
                 'user_date_format': user_date_format
             }
 
-            import os
             base_name = os.path.basename(pdf_file)
             thread_id = f"doc_{base_name}_page_{page_num}"
             config = {"configurable": {"thread_id": thread_id}}
@@ -112,6 +113,121 @@ def process_pdf(pdf_file, user_date_format="DMY"):
         # time.sleep(4)
 
     return course_title_final, all_events, all_syllabus, all_refs
+
+async def process_pdf_stream(pdf_file, user_date_format="DMY"):
+    if pdf_file is None:
+        yield json.dumps({"type": "error", "message": "No file provided"}) + "\n"
+        return
+    
+    try:
+        base_name = os.path.basename(pdf_file)
+        print(f"\n🚀 [{base_name}] Processing PDF: {pdf_file}")
+        doc = await asyncio.to_thread(fitz.open, pdf_file)
+        total_pages = len(doc)
+        print(f"📄 [{base_name}] Total pages = {total_pages}")
+    except Exception as e:
+        yield json.dumps({"type": "error", "message": f"PDF Processing error: {e}"}) + "\n"
+        return
+
+    yield json.dumps({"type": "init", "total_pages": total_pages}) + "\n"
+
+    # Extract pages concurrently or in a thread to avoid blocking
+    def extract_pages():
+        pages = []
+        for i in range(total_pages):
+            page = doc[i]
+            text = page.get_text()
+            pix = page.get_pixmap(dpi=150)
+            img_bytes = pix.tobytes("png")
+            b64_image = base64.b64encode(img_bytes).decode("utf-8")
+            pages.append((i+1, text, b64_image))
+        doc.close() # Crucial: Release file lock so Windows can delete it later
+        return pages
+
+    raw_pages = await asyncio.to_thread(extract_pages)
+
+    course_title_final = "Unknown Course"
+    if raw_pages:
+        try:
+            title = await asyncio.to_thread(extract_course_title, raw_pages[0][1], raw_pages[0][2])
+            if title:
+                course_title_final = title
+                print(f"🎓 [{base_name}] Extracted Course Title: {course_title_final}")
+            else:
+                print(f"⚠️ [{base_name}] No Course Title extracted.")
+        except Exception as e:
+            print(f"🔥 [{base_name}] Course Title Extraction error: {e}")
+
+    yield json.dumps({"type": "progress", "message": f"Extracted Title: {course_title_final}"}) + "\n"
+
+    all_events = []
+    all_syllabus = []
+    all_refs = []
+
+    run_id = str(uuid.uuid4())[:8]
+
+    for page_num, text, b64_image in raw_pages:
+        start_time = time.time()
+        print(f"🔄 [{base_name}] Processing Page {page_num}...")
+        yield json.dumps({"type": "progress", "message": f"Processing Page {page_num}/{total_pages}..."}) + "\n"
+        
+        try:
+            initial_state = {
+                'raw_text': text,
+                'page_image_b64': b64_image,
+                'known_course_title': course_title_final,
+                'user_date_format': user_date_format
+            }
+            
+            # Use run_id to ensure LangGraph doesn't cache previous uploads of the same PDF
+            thread_id = f"doc_{base_name}_page_{page_num}_{run_id}"
+            config = {"configurable": {"thread_id": thread_id}}
+
+            # Run langgraph synchronously in a thread pool to avoid blocking FastAPI
+            result = await asyncio.to_thread(app.invoke, initial_state, config)
+            
+            events = result.get("final_schedule", [])
+            syllabus = result.get("syllabus_data", [])
+            refs = result.get("reference_data", [])
+            
+            all_events.extend(events)
+            all_syllabus.extend(syllabus)
+            if refs:
+                all_refs.extend(refs)
+                
+            if events:
+                print(f"  ✅ [{base_name}] Extracted {len(events)} Evaluation events from Page {page_num}.")
+            if syllabus:
+                print(f"  ✅ [{base_name}] Extracted {len(syllabus)} Syllabus topics from Page {page_num}.")
+            if refs:
+                print(f"  ✅ [{base_name}] Extracted {len(refs)} Reference Books from Page {page_num}.")
+                
+            if not events and not syllabus and not refs:
+                print(f"  ⏭️ [{base_name}] Skipped Page {page_num} (No relevant data found).")
+            
+            end_time = time.time()
+            print(f"⏱️ [{base_name}] Time taken for Page {page_num}: {end_time - start_time:.2f} seconds.\n")
+
+            yield json.dumps({
+                "type": "page_done", 
+                "page": page_num, 
+                "events_found": len(events),
+                "syllabus_found": len(syllabus),
+                "refs_found": len(refs)
+            }) + "\n"
+            
+        except Exception as e:
+            print(f"  🔥 [{base_name}] Error on Page {page_num}: {e}")
+            yield json.dumps({"type": "error", "message": f"Error on Page {page_num}: {str(e)}"}) + "\n"
+
+    final_data = {
+        "course_title": course_title_final,
+        "evaluation_scheme": all_events,
+        "syllabus_topics": all_syllabus,
+        "references": all_refs
+    }
+    
+    yield json.dumps({"type": "done", "data": final_data}) + "\n"
 
 def main(pdf_files):
     all_pdf_events = []
