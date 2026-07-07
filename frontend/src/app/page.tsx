@@ -3,8 +3,9 @@ import { useState, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { FileJson, FileText, ArrowLeft, UploadCloud, X, CheckCircle2, Loader2 } from "lucide-react";
+import { FileJson, FileText, ArrowLeft, UploadCloud, X, CheckCircle2, Loader2, Download } from "lucide-react";
 import { useDropzone } from "react-dropzone";
+import { toast } from "sonner";
 import { SemesterProfile, CourseData } from "@/types";
 
 export default function Home() {
@@ -178,7 +179,23 @@ export default function Home() {
       setSemesterData({ courses: aggregatedCourses });
       setIsProcessing(false);
       setView("dashboard");
+      toast.success("Extraction Complete!", {
+        description: "Save this JSON for instant access next time.",
+      });
     }
+  };
+
+  const handleDownloadJson = () => {
+    if (!semesterData) return;
+    const blob = new Blob([JSON.stringify(semesterData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "Semester_Profile.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   if (view === "options") {
@@ -383,13 +400,18 @@ export default function Home() {
   if (view === "dashboard") {
     return (
       <div className="flex flex-col gap-6 max-w-5xl mx-auto w-full pb-16">
-        <div className="flex items-center justify-between border-b pb-4">
+        <div className="flex items-center justify-between border-b pb-4 mt-8">
           <h1 className="text-3xl font-bold tracking-tight">Your Semester Dashboard</h1>
-          <Button variant="outline" onClick={() => {
-            setView("options");
-            setPdfFiles([]);
-            setSemesterData(null);
-          }}>Upload More</Button>
+          <div className="flex gap-4">
+            <Button variant="default" onClick={handleDownloadJson}>
+              <Download className="w-4 h-4 mr-2" /> Download JSON
+            </Button>
+            <Button variant="outline" onClick={() => {
+              setView("options");
+              setPdfFiles([]);
+              setSemesterData(null);
+            }}>Upload More</Button>
+          </div>
         </div>
         
         <div className="bg-card border rounded-xl p-6 shadow-sm overflow-auto max-h-[70vh]">

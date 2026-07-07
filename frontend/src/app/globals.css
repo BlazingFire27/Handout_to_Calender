@@ -148,3 +148,12 @@
   from { opacity: 0; }
   to { opacity: 1; }
 }
+
+@layer utilities {
+  .gradient-border-toast {
+    border: 2px solid transparent !important;
+    background-image: linear-gradient(var(--background), var(--background)), linear-gradient(to right, #6366f1, #a855f7, #ec4899) !important;
+    background-origin: border-box !important;
+    background-clip: padding-box, border-box !important;
+  }
+}
