@@ -1,7 +1,6 @@
 import os
 import asyncio
 import shutil
-import concurrent.futures
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -16,9 +15,8 @@ limiter = Limiter(key_func=get_remote_address)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Overrides the default OS thread limit to 100 to prevent ThreadPool Starvation during heavy parallel PDF processing
-    loop = asyncio.get_running_loop()
-    loop.set_default_executor(concurrent.futures.ThreadPoolExecutor(max_workers=100))
+    # All LLM calls are now fully async (ainvoke) — no thread pool needed for API calls.
+    # asyncio's default executor handles remaining sync file I/O (PyMuPDF).
     yield
 
 app = FastAPI(title="Handout to Calendar API", lifespan=lifespan)
