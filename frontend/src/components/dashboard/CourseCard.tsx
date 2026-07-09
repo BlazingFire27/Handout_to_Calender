@@ -60,7 +60,7 @@ export function CourseCard({ course }: CourseCardProps) {
             {/* ═══════════ EXAMS TAB — Accordion with per-exam Calendar buttons ═══════════ */}
             <TabsContent value="schedule" className="p-6">
               {course.evaluation_scheme.length > 0 ? (
-                <Accordion defaultValue={DEFAULT_ACCORDION_STATE} className="w-full space-y-2">
+                <Accordion multiple defaultValue={DEFAULT_ACCORDION_STATE} className="w-full space-y-2">
                   {course.evaluation_scheme.map((exam: any, eIdx: number) => {
                     let dateDay = "";
                     let startTime = "";
@@ -77,6 +77,11 @@ export function CourseCard({ course }: CourseCardProps) {
                           const endObj = new Date(exam.End_DateTime);
                           endTime = new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(endObj);
                         }
+
+                        if (startTime === "12:00 AM" && (endTime === "11:59 PM" || !endTime)) {
+                          startTime = "Not specified in handout";
+                          endTime = "Not specified in handout";
+                        }
                       }
                     } catch (e) { /* graceful fallback */ }
 
@@ -92,22 +97,13 @@ export function CourseCard({ course }: CourseCardProps) {
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
                           <div className="space-y-3 pt-2 border-t border-border/30">
-                            {/* Date & Time */}
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm pt-2">
-                              <span className="flex items-center gap-1.5">
-                                📅 <strong>{dateDay || "Date TBA"}</strong>
-                              </span>
-                              {startTime && (
-                                <span className="flex items-center gap-1.5">
-                                  ⏰ {startTime}{endTime ? ` → ${endTime}` : ""}
-                                </span>
-                              )}
-                            </div>
-
-                            {/* Format & Weightage */}
-                            <div className="flex flex-wrap gap-2">
-                              {exam.Format && <Badge variant="outline">{exam.Format}</Badge>}
-                              {exam.Weightage && <Badge variant="secondary">{exam.Weightage}</Badge>}
+                            {/* Date, Time, Format & Weightage */}
+                            <div className="flex flex-col gap-1 text-sm pt-2">
+                              <span><strong>Date (Day):</strong> {dateDay ? dateDay : "Date TBA"}</span>
+                              <span><strong>Start Time:</strong> {startTime ? startTime : "NA"}</span>
+                              <span><strong>End Time:</strong> {endTime ? endTime : "NA"}</span>
+                              <span><strong>Type:</strong> {exam.Format ? exam.Format : "NA"}</span>
+                              <span><strong>Weightage:</strong> {exam.Weightage ? exam.Weightage : "NA"}</span>
                             </div>
 
                             {/* Add to Google Calendar */}
@@ -265,10 +261,23 @@ export function CourseCard({ course }: CourseCardProps) {
             <X className="w-8 h-8" />
           </button>
           <img
-            src={zoomedImage}
+            src={zoomedImage.replace("zoom=1", "zoom=0").replace("&edge=curl", "")}
             alt="Book cover enlarged"
-            className="max-h-[80vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            className="w-[90vw] h-[90vh] object-contain rounded-lg shadow-2xl"
             onClick={(e) => e.stopPropagation()}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              // Google Books API often returns a generic wide placeholder (text on white) if a high-res cover is missing.
+              // Since real textbook covers are portrait, if width > height, it's definitely a placeholder.
+              if (img.naturalWidth > img.naturalHeight && img.src !== zoomedImage) {
+                img.src = zoomedImage; // Fallback to original thumbnail
+              }
+            }}
+            onError={(e) => {
+              if (e.currentTarget.src !== zoomedImage) {
+                e.currentTarget.src = zoomedImage;
+              }
+            }}
           />
         </div>
       )}
