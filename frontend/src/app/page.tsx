@@ -143,10 +143,9 @@ export default function Home() {
               } else if (data.type === "page_done") {
                 progressTracker[index].completedPages++;
                 totalEvents += data.events_found || 0;
-                totalSyllabus += data.syllabus_found || 0;
                 totalRefs += data.refs_found || 0;
                 
-                setProcessStatus(`Extracted ${totalEvents} exams, ${totalSyllabus} topics, and ${totalRefs} textbooks so far...`);
+                setProcessStatus(`Extracted ${totalEvents} exams and ${totalRefs} textbooks so far...`);
                 updateGlobalProgress();
               } else if (data.type === "done") {
                 setFileStatuses(prev => ({ ...prev, [file.name]: "✅ Extraction Complete" }));
