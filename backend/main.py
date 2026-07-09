@@ -9,6 +9,9 @@ import os
 import asyncio
 import uuid
 
+# from langchain_core.globals import set_debug
+# set_debug(True)
+
 OUTPUT_DIR = "output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -19,7 +22,7 @@ file1_path = "Handouts/EM Handout.pdf"
 file2_path = "Handouts/DD Handout_2025_2026.pdf"
 file3_path = "Handouts/EEPE18-Digital Signal Processing.pdf"
 
-def process_pdf(pdf_file, user_date_format="DMY"):
+async def process_pdf(pdf_file, user_date_format="DMY"):
     if pdf_file is None:
         return "", [], [], []
     
@@ -49,7 +52,7 @@ def process_pdf(pdf_file, user_date_format="DMY"):
     if raw_pages:
         try:
             # Pass text and image for the first page to support Vision Fallback on scanned PDFs
-            title = extract_course_title(text=raw_pages[0][1], image_b64=raw_pages[0][2])
+            title = await extract_course_title(text=raw_pages[0][1], image_b64=raw_pages[0][2])
             if title:
                 course_title_final = title
                 print(f"Extracted Course Title: {course_title_final}")
@@ -75,11 +78,7 @@ def process_pdf(pdf_file, user_date_format="DMY"):
                 'user_date_format': user_date_format
             }
 
-            base_name = os.path.basename(pdf_file)
-            thread_id = f"doc_{base_name}_page_{page_num}"
-            config = {"configurable": {"thread_id": thread_id}}
-
-            result = app.invoke(initial_state, config=config)
+            result = await app.ainvoke(initial_state)
             
             events = result.get("final_schedule", [])
             syllabus = result.get("syllabus_data", [])
@@ -149,7 +148,7 @@ async def process_pdf_stream(pdf_file, user_date_format="DMY"):
     course_title_final = "Unknown Course"
     if raw_pages:
         try:
-            title = await asyncio.to_thread(extract_course_title, raw_pages[0][1], raw_pages[0][2])
+            title = await extract_course_title(raw_pages[0][1], raw_pages[0][2])
             if title:
                 course_title_final = title
                 print(f"🎓 [{base_name}] Extracted Course Title: {course_title_final}")
@@ -179,12 +178,8 @@ async def process_pdf_stream(pdf_file, user_date_format="DMY"):
                 'user_date_format': user_date_format
             }
             
-            # Use run_id to ensure LangGraph doesn't cache previous uploads of the same PDF
-            thread_id = f"doc_{base_name}_page_{page_num}_{run_id}"
-            config = {"configurable": {"thread_id": thread_id}}
-
-            # Run langgraph synchronously in a thread pool to avoid blocking FastAPI
-            result = await asyncio.to_thread(app.invoke, initial_state, config)
+            # Run langgraph natively async — no thread wrapper needed
+            result = await app.ainvoke(initial_state)
             
             events = result.get("final_schedule", [])
             syllabus = result.get("syllabus_data", [])
@@ -229,12 +224,12 @@ async def process_pdf_stream(pdf_file, user_date_format="DMY"):
     
     yield json.dumps({"type": "done", "data": final_data}) + "\n"
 
-def main(pdf_files):
+async def main(pdf_files):
     all_pdf_events = []
     semester_profile = {"courses": []}
 
     for pdf_file in pdf_files:
-        course_title, events, syllabus, refs = process_pdf(pdf_file)
+        course_title, events, syllabus, refs = await process_pdf(pdf_file)
         
         course_data = {
             "course_title": course_title,
@@ -261,7 +256,7 @@ def main(pdf_files):
 
 if __name__ == "__main__":
     files = [file3_path]
-    main(files)
+    asyncio.run(main(files))
 
 
 ####

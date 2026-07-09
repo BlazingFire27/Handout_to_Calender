@@ -1,5 +1,6 @@
 import os
-import concurrent.futures
+import asyncio
+import time
 
 from langchain_openai import ChatOpenAI
 # from langchain_google_genai import ChatGoogleGenerativeAI
@@ -8,7 +9,6 @@ from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.messages import HumanMessage
 
 from langgraph.graph import StateGraph, END, START
-from langgraph.checkpoint.memory import MemorySaver
 
 from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
 from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_parallel
@@ -66,26 +66,28 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # Text & Vision: google/gemma-4-26b-a4b-it (AIGateway ONLY Promo)
 # ------------------------------------------------------------------------------
 llm = ChatOpenAI(
-    model_name="google/gemma-4-26b-a4b-it",
+    # model_name="google/gemma-4-26b-a4b-it",
+    model_name="moonshot/kimi-k2.6",
     openai_api_base="https://api.aigateway.sh/v1",
     openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
     max_retries=3, 
-    request_timeout=300.0,
+    request_timeout=180.0,
 )
 
 vision_llm = ChatOpenAI(
-    model_name="google/gemma-4-26b-a4b-it",
+    # model_name="google/gemma-4-26b-a4b-it",
+    model_name="moonshot/kimi-k2.6",
     openai_api_base="https://api.aigateway.sh/v1",
     openai_api_key=AIGATEWAY_API_KEY,
     temperature=0,
     max_retries=3,
-    request_timeout=300.0,
+    request_timeout=180.0,
 )
 # ==============================================================================
 
 
-def extract_course_title(text: str, image_b64: str = ""):
+async def extract_course_title(text: str, image_b64: str = ""):
     parser = PydanticOutputParser(pydantic_object=CourseTitle)
     
     system_message = '''
@@ -113,7 +115,7 @@ def extract_course_title(text: str, image_b64: str = ""):
             {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
         ])
         try:
-            response = vision_llm.invoke([message])
+            response = await vision_llm.ainvoke([message])
             result = parser.invoke(response)
             return result.title
         except Exception as e:
@@ -128,7 +130,7 @@ def extract_course_title(text: str, image_b64: str = ""):
     chain = prompt | llm | parser
 
     try:
-        result = chain.invoke({
+        result = await chain.ainvoke({
             "text": text[:3000],
             "format_instructions": parser.get_format_instructions()
         })
@@ -138,7 +140,7 @@ def extract_course_title(text: str, image_b64: str = ""):
         print(f"extracting course error= {e}")
         return "Unknown Course"
 
-def router_node(state: State):
+async def router_node(state: State):
     parser = PydanticOutputParser(pydantic_object=RouteDecision)
     
     system_message = '''
@@ -146,7 +148,7 @@ def router_node(state: State):
     Analyze the text and categorize it. It may belong to multiple categories.
     Categories:
     - 'EVAL': MUST contain an actual Evaluation Scheme, Exam Schedule, list of Quizzes, Mid-Sem dates, Comprehensive exam dates, or Weightage tables. Do NOT classify general grading notices or make-up policies as EVAL unless actual dates or weightages are present.
-    - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives.
+    # - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives. (DISABLED: Uncomment when syllabus feature is needed)
     - 'REFERENCES': Contains Textbooks, Reference Books, required reading materials.
     - 'SKIP': General introduction, textbook lists without schedules, or completely irrelevant.
     
@@ -167,7 +169,7 @@ def router_node(state: State):
                 {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}
             ])
             try:
-                response = vision_llm.invoke([message])
+                response = await vision_llm.ainvoke([message])
                 result = parser.invoke(response)
                 return {"classification": result.categories}
             except Exception as e:
@@ -184,7 +186,7 @@ def router_node(state: State):
     chain = prompt | llm | parser
 
     try:
-        result = chain.invoke({
+        result = await chain.ainvoke({
             "text": raw_text[:3000],
             "format_instructions": parser.get_format_instructions()
         })
@@ -195,7 +197,7 @@ def router_node(state: State):
 
     return {"classification": categories}
 
-def vision_eval_extractor_node(state: State):
+async def vision_eval_extractor_node(state: State):
     parser = PydanticOutputParser(pydantic_object=EvalList)
     
     system_text = f'''
@@ -234,11 +236,14 @@ def vision_eval_extractor_node(state: State):
     )
 
     try:
-        response = vision_llm.invoke([message])
+        start_time = time.time()
+        print(f"[DEBUG] >>> Sending EVAL Vision LLM request...")
+        response = await vision_llm.ainvoke([message])
+        print(f"[DEBUG] <<< Received EVAL Vision LLM response in {time.time() - start_time:.2f}s!")
         result = parser.invoke(response)
         return {"eval_data": [item.model_dump() for item in result.items]}
     except Exception as e:
-        print(f"Vision extractor error= {e}")
+        print(f"[DEBUG] !!! Vision extractor error= {e}")
         return {"eval_data": []}
 
 def aggregator_node(state: State):
@@ -283,7 +288,7 @@ def aggregator_node(state: State):
 
     return {"final_schedule": final_schedule}
 
-def vision_syllabus_extractor_node(state: State):
+async def vision_syllabus_extractor_node(state: State):
     parser = PydanticOutputParser(pydantic_object=SyllabusList)
     
     system_text = f'''
@@ -302,14 +307,17 @@ def vision_syllabus_extractor_node(state: State):
     
     message = HumanMessage(content=[{"type": "text", "text": system_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}])
     try:
-        response = vision_llm.invoke([message])
+        start_time = time.time()
+        print(f"[DEBUG] >>> Sending SYLLABUS Vision LLM request...")
+        response = await vision_llm.ainvoke([message])
+        print(f"[DEBUG] <<< Received SYLLABUS Vision LLM response in {time.time() - start_time:.2f}s!")
         result = parser.invoke(response)
         return {"syllabus_data": [item.model_dump() for item in result.items]}
     except Exception as e:
-        print(f"Syllabus extractor error= {e}")
+        print(f"[DEBUG] !!! Syllabus extractor error= {e}")
         return {"syllabus_data": []}
 
-def vision_reference_extractor_node(state: State):
+async def vision_reference_extractor_node(state: State):
     parser = PydanticOutputParser(pydantic_object=ReferenceList)
     
     system_text = f'''
@@ -327,17 +335,19 @@ def vision_reference_extractor_node(state: State):
     
     message = HumanMessage(content=[{"type": "text", "text": system_text}, {"type": "image_url", "image_url": {"url": f"data:image/png;base64,{image_b64}"}}])
     try:
-        response = vision_llm.invoke([message])
+        start_time = time.time()
+        print(f"[DEBUG] >>> Sending REFERENCES Vision LLM request...")
+        response = await vision_llm.ainvoke([message])
+        print(f"[DEBUG] <<< Received REFERENCES Vision LLM response in {time.time() - start_time:.2f}s!")
         result = parser.invoke(response)
         return {"reference_data": [item.model_dump() for item in result.items]}
     except Exception as e:
-        print(f"Reference extractor error= {e}")
+        print(f"[DEBUG] !!! Reference extractor error= {e}")
         return {"reference_data": []}
 
-def vision_orchestrator_node(state: State):
+async def vision_orchestrator_node(state: State):
     categories = state.get("classification", [])
     
-    futures = {}
     results = {
         "eval_data": [],
         "syllabus_data": [],
@@ -346,27 +356,33 @@ def vision_orchestrator_node(state: State):
     
     if not categories or "SKIP" in categories:
         return results
+    
+    # Build async tasks for true concurrent fan-out (no threads needed)
+    tasks = {}
+    if "EVAL" in categories:
+        tasks["EVAL"] = vision_eval_extractor_node(state)
+    # DISABLED: Syllabus extraction commented out for cost/speed optimization.
+    # Uncomment below (+ router prompt category) to re-enable when syllabus feature is ready.
+    # if "SYLLABUS" in categories:
+    #     tasks["SYLLABUS"] = vision_syllabus_extractor_node(state)
+    if "REFERENCES" in categories:
+        tasks["REFERENCES"] = vision_reference_extractor_node(state)
+    
+    if tasks:
+        task_keys = list(tasks.keys())
+        task_results = await asyncio.gather(*tasks.values(), return_exceptions=True)
         
-    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-        if "EVAL" in categories:
-            futures["EVAL"] = executor.submit(vision_eval_extractor_node, state)
-        if "SYLLABUS" in categories:
-            futures["SYLLABUS"] = executor.submit(vision_syllabus_extractor_node, state)
-        if "REFERENCES" in categories:
-            futures["REFERENCES"] = executor.submit(vision_reference_extractor_node, state)
-            
-        for cat, future in futures.items():
-            try:
-                res = future.result()
-                if cat == "EVAL":
-                    results["eval_data"] = res.get("eval_data", [])
-                elif cat == "SYLLABUS":
-                    results["syllabus_data"] = res.get("syllabus_data", [])
-                elif cat == "REFERENCES":
-                    results["reference_data"] = res.get("reference_data", [])
-            except Exception as e:
-                print(f"Orchestrator error in {cat}: {e}")
-                
+        for cat, res in zip(task_keys, task_results):
+            if isinstance(res, Exception):
+                print(f"Orchestrator error in {cat}: {res}")
+                continue
+            if cat == "EVAL":
+                results["eval_data"] = res.get("eval_data", [])
+            # elif cat == "SYLLABUS":
+            #     results["syllabus_data"] = res.get("syllabus_data", [])
+            elif cat == "REFERENCES":
+                results["reference_data"] = res.get("reference_data", [])
+    
     return results
 
 def route_decision(state: State) -> str:
@@ -375,7 +391,7 @@ def route_decision(state: State) -> str:
     if "SKIP" in categories or not categories:
         return "end"
         
-    if any(c in categories for c in ["EVAL", "SYLLABUS", "REFERENCES"]):
+    if any(c in categories for c in ["EVAL", "REFERENCES"]):  # SYLLABUS removed — re-add when needed
         return "vision_orchestrator"
         
     return "end"
@@ -407,6 +423,5 @@ workflow.add_edge("vision_orchestrator", "aggregator")
 workflow.add_edge("aggregator", "post_process")
 workflow.add_edge("post_process", END)
 
-memory = MemorySaver()
-app = workflow.compile(checkpointer=memory)
-print("Graph Compiled Successfully with MemorySaver!")
+app = workflow.compile()
+print("Graph Compiled Successfully without MemorySaver (Stateless)!")
