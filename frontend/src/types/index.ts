@@ -1,10 +1,11 @@
 export interface Event {
-  title: string;
-  date: string;
-  time: string;
-  duration: string;
-  weightage: string;
-  type: string;
+  Subject: string;
+  Event_Name: string;
+  Start_DateTime: string;
+  End_DateTime: string;
+  Format: string;
+  Weightage: string;
+  Raw_Time_String?: string;
   course_title?: string;
 }
 
