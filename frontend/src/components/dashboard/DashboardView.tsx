@@ -40,7 +40,7 @@ export function DashboardView({ semesterData, onReset, onUpdateEvent }: Dashboar
 
       {/* Global Calendar Export Area (2-Click Solution) */}
       <Card className="bg-primary/5 border-primary/20 shadow-lg">
-        <CardContent className="p-6 md:p-8 flex flex-col md:flex-row items-center gap-8">
+        <CardContent className="p-6 md:p-8 flex flex-col lg:flex-row items-center gap-8">
           <div className="flex-1 space-y-4">
             <div>
               <Badge variant="secondary" className="mb-2 bg-primary/20 text-primary hover:bg-primary/30">Frictionless Export</Badge>
@@ -58,13 +58,13 @@ export function DashboardView({ semesterData, onReset, onUpdateEvent }: Dashboar
           </div>
           
           {/* Carousel for Instructions */}
-          <div className="w-full md:w-80 shrink-0">
+          <div className="w-full lg:w-80 shrink-0">
             <Carousel className="w-full max-w-xs mx-auto">
               <CarouselContent>
                 <CarouselItem>
                   <div className="p-1">
                     <Card className="border-0 shadow-none bg-background/50">
-                      <CardContent className="flex flex-col aspect-[4/3] items-center justify-center p-6 text-center space-y-3">
+                      <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-3 min-h-[180px]">
                         <Download className="w-10 h-10 text-primary/50" />
                         <h3 className="font-semibold text-lg">Step 1: Download</h3>
                         <p className="text-sm text-muted-foreground">Click the download button to save the Combined_Exam_Schedule.ics file locally.</p>
@@ -75,7 +75,7 @@ export function DashboardView({ semesterData, onReset, onUpdateEvent }: Dashboar
                 <CarouselItem>
                   <div className="p-1">
                     <Card className="border-0 shadow-none bg-background/50">
-                      <CardContent className="flex flex-col aspect-[4/3] items-center justify-center p-6 text-center space-y-3">
+                      <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-3 min-h-[180px]">
                         <ExternalLink className="w-10 h-10 text-primary/50" />
                         <h3 className="font-semibold text-lg">Step 2: Open Google</h3>
                         <p className="text-sm text-muted-foreground">Click the second button to jump straight to the Google Calendar Import settings page.</p>
@@ -86,7 +86,7 @@ export function DashboardView({ semesterData, onReset, onUpdateEvent }: Dashboar
                 <CarouselItem>
                   <div className="p-1">
                     <Card className="border-0 shadow-none bg-background/50">
-                      <CardContent className="flex flex-col aspect-[4/3] items-center justify-center p-6 text-center space-y-3">
+                      <CardContent className="flex flex-col items-center justify-center p-6 text-center space-y-3 min-h-[180px]">
                         <Calendar className="w-10 h-10 text-primary/50" />
                         <h3 className="font-semibold text-lg">Step 3: Upload</h3>
                         <p className="text-sm text-muted-foreground">Under "Import", select the downloaded file, choose your calendar, and click Import!</p>
