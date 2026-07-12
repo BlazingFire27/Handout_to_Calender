@@ -2,6 +2,10 @@
 This repository contains a Gen AI project focused on an AI agent for automating the process of adding to Calender from University Course Handouts. 
 The project leverages the LangGraph, OpenAI wrapper etc to create the bot.
 
+<p align="center">
+  <img src="Images/frontend_final.png" alt="Handout to Calendar Dashboard Working Screen" width="100%">
+</p>
+
 ## Technologies
 Modules used:
 1. LangGraph (for StateGraph & Multi-Agent Orchestration)
@@ -187,11 +191,6 @@ User can input multiple pdfs at once
 ## OUTPUT UI
 ![Working Model](Images/working_model_1.png)
 
-## OUTPUT CLI
-![CLI OUTPUT](Images/output.png)
-
-- We can clearly see that for page 3 of both Electrical Machines and Digital Design Courses took longer time clearly shows that those are the two pages with the contents of exams
-
 ## TO ADD TO GOOGLE CALENDER
 - Import the Combined_Exam_Schedule.ics file into the calender and **BOOM** there you go all the events are now PRESENT
 
@@ -205,3 +204,8 @@ User can input multiple pdfs at once
 ### Why it was scrapped:
 1. **Brittle Aggregation:** Splitting the "Time" and "Details" into two completely separate LLM calls required fuzzy string matching in the Aggregator to stitch them back together. If one node called an event "Mid-Sem" and the other called it "Mid Semester", the merge would fail entirely.
 2. **Tabular Hallucinations:** Text-based parsers like `pdfplumber` destroy the visual layout of complex tables (merged cells, wrapped text, and column alignments). Feeding this scrambled text to an LLM caused massive hallucinations when trying to figure out which weightage belonged to which assignment. Switching to the Vision Graph solved this instantly.
+
+### Legacy CLI Output (Scrapped V1 Execution Log)
+![CLI OUTPUT](Images/output.png)
+
+*Note: For page 3 of both Electrical Machines and Digital Design Courses, the extraction took longer, indicating those were the two pages with the exam contents.*
