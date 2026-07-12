@@ -1,14 +1,21 @@
 "use client"
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library } from "lucide-react";
-import { CourseData } from "@/types";
+import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library, Pencil } from "lucide-react";
+import { CourseData, Event } from "@/types";
 import { handleExportCSV, generateAIPrompt, handleCopyPrompt } from "@/lib/exportUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 // Helper: Build a Google Calendar "Add Event" URL for a single exam (no OAuth needed)
 function buildGoogleCalendarUrl(exam: any, courseTitle: string): string | null {
@@ -32,12 +39,92 @@ function buildGoogleCalendarUrl(exam: any, courseTitle: string): string | null {
 
 interface CourseCardProps {
   course: CourseData;
+  courseIdx: number;
+  onUpdateEvent: (courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => void;
 }
 
 const DEFAULT_ACCORDION_STATE = ["exam-0"];
 
-export function CourseCard({ course }: CourseCardProps) {
+export function CourseCard({ course, courseIdx, onUpdateEvent }: CourseCardProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
+
+  // Editing state
+  const [editingEvent, setEditingEvent] = useState<{ courseIdx: number; eventIdx: number; exam: Event } | null>(null);
+
+  // Form states
+  const [eventName, setEventName] = useState("");
+  const [eventDate, setEventDate] = useState("");
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [eventFormat, setEventFormat] = useState("");
+  const [eventWeightage, setEventWeightage] = useState("");
+
+  useEffect(() => {
+    if (editingEvent) {
+      const exam = editingEvent.exam;
+      setEventName(exam.Event_Name || "");
+      setEventFormat(exam.Format || "");
+      setEventWeightage(exam.Weightage || "");
+
+      let dateStr = "";
+      let startStr = "";
+      let endStr = "";
+
+      if (exam.Start_DateTime) {
+        const parts = exam.Start_DateTime.split("T");
+        dateStr = parts[0];
+        if (parts[1]) {
+          startStr = parts[1].substring(0, 5); // "HH:MM"
+        }
+      }
+      if (exam.End_DateTime) {
+        const parts = exam.End_DateTime.split("T");
+        if (parts[1]) {
+          endStr = parts[1].substring(0, 5); // "HH:MM"
+        }
+      }
+
+      setEventDate(dateStr);
+
+      const allDay = startStr === "00:00" && (endStr === "23:59" || endStr === "23:59:59");
+      setIsAllDay(allDay);
+      setStartTime(allDay ? "" : startStr);
+      setEndTime(allDay ? "" : endStr);
+    }
+  }, [editingEvent]);
+
+  const handleSave = () => {
+    if (!editingEvent) return;
+
+    let finalStart = "";
+    let finalEnd = "";
+
+    if (isAllDay) {
+      finalStart = `${eventDate}T00:00:00`;
+      finalEnd = `${eventDate}T23:59:59`;
+    } else {
+      const start = startTime || "00:00";
+      const end = endTime || "23:59";
+      finalStart = `${eventDate}T${start}:00`;
+      finalEnd = `${eventDate}T${end}:00`;
+    }
+
+    const subjectPrefix = isAllDay ? "⚠️ TIME TBA: " : "";
+    const subject = `${subjectPrefix}${course.course_title.toUpperCase()} + ${eventName}`;
+
+    const updated: Partial<Event> = {
+      Event_Name: eventName,
+      Start_DateTime: finalStart,
+      End_DateTime: finalEnd,
+      Format: eventFormat,
+      Weightage: eventWeightage,
+      Subject: subject
+    };
+
+    onUpdateEvent(editingEvent.courseIdx, editingEvent.eventIdx, updated);
+    setEditingEvent(null);
+  };
 
   return (
     <>
@@ -106,17 +193,27 @@ export function CourseCard({ course }: CourseCardProps) {
                               <span><strong>Weightage:</strong> {exam.Weightage ? exam.Weightage : "NA"}</span>
                             </div>
 
-                            {/* Add to Google Calendar */}
-                            {calUrl && (
-                              <a
-                                href={calUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={buttonVariants({ variant: "outline", size: "sm", className: "w-full sm:w-auto mt-1" })}
+                            {/* Actions: Add to Google Calendar & Edit Details */}
+                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                              {calUrl && (
+                                <a
+                                  href={calUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className={buttonVariants({ variant: "outline", size: "sm", className: "w-full sm:w-auto" })}
+                                >
+                                  <Calendar className="w-4 h-4 mr-2" /> Add to Google Calendar
+                                </a>
+                              )}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full sm:w-auto"
+                                onClick={() => setEditingEvent({ courseIdx, eventIdx: eIdx, exam })}
                               >
-                                <Calendar className="w-4 h-4 mr-2" /> Add to Google Calendar
-                              </a>
-                            )}
+                                <Pencil className="w-4 h-4 mr-2" /> Edit Event
+                              </Button>
+                            </div>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
@@ -280,6 +377,115 @@ export function CourseCard({ course }: CourseCardProps) {
             }}
           />
         </div>
+      )}
+      {/* ═══════════ Event Edit Modal ═══════════ */}
+      {editingEvent && (
+        <Dialog open={!!editingEvent} onOpenChange={(open) => { if (!open) setEditingEvent(null); }}>
+          <DialogContent className="sm:max-w-md w-full bg-card text-card-foreground border border-border rounded-lg shadow-xl p-6">
+            <DialogHeader className="mb-4">
+              <DialogTitle className="text-xl font-bold flex items-center gap-2 text-primary">
+                <Pencil className="w-5 h-5" /> Edit Event Details
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground">Modify extracted details for this academic event.</p>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {/* Event Name */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Event Name</label>
+                <input
+                  type="text"
+                  value={eventName}
+                  onChange={(e) => setEventName(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="e.g. Mid-Sem Exam"
+                />
+              </div>
+
+              {/* Event Date */}
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Event Date</label>
+                <input
+                  type="date"
+                  value={eventDate}
+                  onChange={(e) => setEventDate(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                />
+              </div>
+
+              {/* All Day Event Checkbox */}
+              <div className="flex items-center gap-2 py-1">
+                <input
+                  type="checkbox"
+                  id="all-day-checkbox"
+                  checked={isAllDay}
+                  onChange={(e) => setIsAllDay(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="all-day-checkbox" className="text-sm font-medium text-foreground select-none cursor-pointer">
+                  All Day / Time Not Specified
+                </label>
+              </div>
+
+              {/* Start & End Times */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Start Time</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    disabled={isAllDay}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">End Time</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    disabled={isAllDay}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  />
+                </div>
+              </div>
+
+              {/* Format & Weightage */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Type / Format</label>
+                  <input
+                    type="text"
+                    value={eventFormat}
+                    onChange={(e) => setEventFormat(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. CB or OB"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wider block">Weightage</label>
+                  <input
+                    type="text"
+                    value={eventWeightage}
+                    onChange={(e) => setEventWeightage(e.target.value)}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    placeholder="e.g. 25%"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <DialogFooter className="mt-6 flex justify-end gap-3 border-t border-border/50 pt-4">
+              <Button variant="outline" onClick={() => setEditingEvent(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleSave} disabled={!eventName || !eventDate}>
+                Save Changes
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );
