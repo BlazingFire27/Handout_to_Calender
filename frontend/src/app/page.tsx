@@ -209,6 +209,9 @@ export default function Home() {
       });
       return { ...prev, courses: updatedCourses };
     });
+    toast.success("JSON Profile Updated!", {
+      description: "Please download the updated JSON file to preserve your changes.",
+    });
   }, []);
 
   if (view === "options") {
