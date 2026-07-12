@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Upload, Download, Pencil, Calendar, Shield, AlertTriangle, X } from "lucide-react";
+import { ArrowLeft, Upload, Download, Pencil, Calendar, Shield, AlertTriangle, X, Cpu, RefreshCw } from "lucide-react";
 import Link from "next/link";
 
 export default function DocsPage() {
@@ -27,6 +27,58 @@ export default function DocsPage() {
         </p>
       </div>
 
+      {/* Available Features */}
+      <div className="space-y-6">
+        <h2 className="text-2xl font-bold tracking-tight border-b pb-2 flex items-center gap-2">
+          <Cpu className="w-6 h-6 text-primary" /> Key Features
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="bg-muted/5 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-primary" /> AI Handout Parsing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-base text-muted-foreground leading-relaxed">
+              Extract dates, start/end times, exam types, and textbooks directly from handouts using intelligent AI agents.
+            </CardContent>
+          </Card>
+
+          <Card className="bg-muted/5 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Pencil className="w-5 h-5 text-primary" /> Human in the Loop Editing
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-base text-muted-foreground leading-relaxed">
+              Correct and refine any extracted exam details directly on the dashboard. Changes automatically update the backup profile.
+            </CardContent>
+          </Card>
+
+          <Card className="bg-muted/5 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Download className="w-5 h-5 text-primary" /> Stateless JSON Backups
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-base text-muted-foreground leading-relaxed">
+              Download your profile as a JSON file. This allows you to restore your entire semester dashboard instantly later.
+            </CardContent>
+          </Card>
+
+          <Card className="bg-muted/5 border-border/50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-primary" /> Multi-Platform Sync
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-base text-muted-foreground leading-relaxed">
+              Export standardized ICS calendar files and import them directly into Google Calendar, Microsoft Outlook, or Notion.
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* Step by Step Guide */}
       <div className="space-y-8">
         <h2 className="text-2xl font-bold tracking-tight border-b pb-2 flex items-center gap-2">
@@ -44,7 +96,7 @@ export default function DocsPage() {
               <CardTitle className="text-2xl">Upload Handouts</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
+              <p className="text-base text-muted-foreground leading-relaxed">
                 Drag and drop your syllabus or evaluation handouts into the PDF section. You can upload up to 20 files at a time.
               </p>
               <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
@@ -58,31 +110,23 @@ export default function DocsPage() {
             </CardContent>
           </Card>
 
-          {/* Step 2: Export JSON */}
+          {/* Step 2: Run AI Extraction */}
           <Card className="overflow-hidden border-border/60 hover:border-border transition-colors">
             <CardHeader className="space-y-1 pb-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">Step 2</span>
-                <Download className="w-5 h-5 text-muted-foreground" />
+                <Cpu className="w-5 h-5 text-muted-foreground" />
               </div>
-              <CardTitle className="text-2xl">Backup Your Data</CardTitle>
+              <CardTitle className="text-2xl">Run AI Extraction</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Click Save JSON to download your profile. Since the app is stateless, keeping this file allows you to restore your dashboard instantly later.
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Click the <strong>Extract Data via AI</strong> button at the bottom of the upload card. The backend will parse all your files in parallel to build your custom schedule.
               </p>
-              <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
-                <img
-                  src="/images/docs/export.png"
-                  alt="Save JSON screen"
-                  className="rounded-md border border-border/30 cursor-zoom-in hover:brightness-95 transition-all w-full max-w-3xl h-auto object-contain max-h-[500px] shadow-sm"
-                  onClick={() => setZoomedImage("/images/docs/export.png")}
-                />
-              </div>
             </CardContent>
           </Card>
 
-          {/* Step 3: Edit Event */}
+          {/* Step 3: Correct & Refine */}
           <Card className="overflow-hidden border-border/60 hover:border-border transition-colors">
             <CardHeader className="space-y-1 pb-3">
               <div className="flex items-center justify-between">
@@ -92,8 +136,8 @@ export default function DocsPage() {
               <CardTitle className="text-2xl">Correct and Refine</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Examine your schedule on the dashboard. Click Edit Event on any card to update names, format, weightage, dates, or specific times.
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Review your schedule on the dashboard. Click <strong>Edit Event</strong> on any card to update names, format, weightage, dates, or times. Saving edits will automatically update your active session profile in memory, triggering a confirmation alert.
               </p>
               <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
                 <img
@@ -106,18 +150,42 @@ export default function DocsPage() {
             </CardContent>
           </Card>
 
-          {/* Step 4: Import Calendar */}
+          {/* Step 4: Save JSON */}
           <Card className="overflow-hidden border-border/60 hover:border-border transition-colors">
             <CardHeader className="space-y-1 pb-3">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-primary">Step 4</span>
+                <Download className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl">Backup Your Data</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Click <strong>Save JSON</strong> to download your profile backup named <code>Semester_Profile.json</code>. This file contains all your customized edits and data.
+              </p>
+              <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
+                <img
+                  src="/images/docs/export.png"
+                  alt="Save JSON screen"
+                  className="rounded-md border border-border/30 cursor-zoom-in hover:brightness-95 transition-all w-full max-w-3xl h-auto object-contain max-h-[500px] shadow-sm"
+                  onClick={() => setZoomedImage("/images/docs/export.png")}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 5: Import Calendar */}
+          <Card className="overflow-hidden border-border/60 hover:border-border transition-colors">
+            <CardHeader className="space-y-1 pb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">Step 5</span>
                 <Calendar className="w-5 h-5 text-muted-foreground" />
               </div>
               <CardTitle className="text-2xl">Sync to Your Calendar</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                Export the master ICS file. Open Google Calendar, head to Settings, and select Import to upload the ICS file and sync your schedules.
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Export the master ICS calendar file. Head to Google Calendar Settings, select <strong>Import & Export</strong>, and upload the ICS file to sync your schedules.
               </p>
               <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
                 <img
@@ -125,6 +193,30 @@ export default function DocsPage() {
                   alt="Google Calendar import settings"
                   className="rounded-md border border-border/30 cursor-zoom-in hover:brightness-95 transition-all w-full max-w-3xl h-auto object-contain max-h-[500px] shadow-sm"
                   onClick={() => setZoomedImage("/images/docs/import_button.png")}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Step 6: Instant Restore */}
+          <Card className="overflow-hidden border-border/60 hover:border-border transition-colors">
+            <CardHeader className="space-y-1 pb-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">Step 6</span>
+                <RefreshCw className="w-5 h-5 text-muted-foreground" />
+              </div>
+              <CardTitle className="text-2xl">Instant Dashboard Restore</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-base text-muted-foreground leading-relaxed">
+                Next time you open the app, click the <strong>Upload JSON</strong> option on the home screen. Upload your saved <code>Semester_Profile.json</code> to reload your entire customized dashboard in 1 click, bypassing PDF extraction completely.
+              </p>
+              <div className="w-full flex justify-center bg-muted/5 rounded-lg border border-border/40 p-2 md:p-4">
+                <img
+                  src="/images/docs/restore_dashboard.png"
+                  alt="Restore Dashboard screen"
+                  className="rounded-md border border-border/30 cursor-zoom-in hover:brightness-95 transition-all w-full max-w-3xl h-auto object-contain max-h-[500px] shadow-sm"
+                  onClick={() => setZoomedImage("/images/docs/restore_dashboard.png")}
                 />
               </div>
             </CardContent>
@@ -145,12 +237,12 @@ export default function DocsPage() {
                 <AlertTriangle className="w-4 h-4 text-amber-500" /> Processing Limits
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2 leading-relaxed">
+            <CardContent className="text-base text-muted-foreground space-y-2 leading-relaxed">
               <p>
-                To keep server requests reliable and prevent timeout failures, the app limits document processing to 20 files per session.
+                The system supports up to <strong>20 files per session</strong>. We recommend using <strong>15 PDFs or less</strong> for the fastest processing speeds and maximum pipeline reliability.
               </p>
               <p>
-                If you have more than 20 handouts, combine related files or load them in separate sessions.
+                Do <strong>not combine multiple handouts into a single PDF</strong> file, as merging documents can cause layout fragmentation and lead to errors in the AI extraction logic.
               </p>
             </CardContent>
           </Card>
@@ -161,12 +253,12 @@ export default function DocsPage() {
                 <Shield className="w-4 h-4 text-emerald-500" /> Privacy Policy
               </CardTitle>
             </CardHeader>
-            <CardContent className="text-sm text-muted-foreground space-y-2 leading-relaxed">
+            <CardContent className="text-base text-muted-foreground space-y-2 leading-relaxed">
               <p>
-                We do not track or save your uploads. The backend parses files in real time and streams the results straight back to you.
+                Our services are <strong>fully stateless</strong>. We do <strong>not use databases</strong> or track user uploads. Files are processed in <strong>temporary memory in real-time</strong> and streamed directly back to you.
               </p>
               <p>
-                Once you close the browser tab, all session data is removed. Save your JSON file to keep your progress.
+                Closing your browser tab will <strong>permanently delete</strong> your current session. Remember to <strong>save your JSON backup</strong> to ensure your customized changes are kept.
               </p>
             </CardContent>
           </Card>
