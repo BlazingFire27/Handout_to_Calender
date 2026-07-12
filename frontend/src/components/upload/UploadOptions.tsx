@@ -8,7 +8,14 @@ interface UploadOptionsProps {
 export function UploadOptions({ onSelect }: UploadOptionsProps) {
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8 w-full max-w-4xl mx-auto">
-      <div className="text-center space-y-4">
+      <div className="text-center space-y-4 flex flex-col items-center">
+        <div className="w-72 md:w-80 aspect-[2.5/1] overflow-hidden rounded-xl border border-border bg-white flex items-center justify-center shadow-md mb-4 shrink-0">
+          <img
+            src="/logo_512x512.png"
+            alt="Handout2Calendar Logo"
+            className="w-full h-full object-cover scale-[1.05]"
+          />
+        </div>
         <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-primary">
           Welcome to Handout2Calendar
         </h1>

@@ -20,6 +20,17 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Handout to Calendar",
   description: "AI-powered schedule extractor from university handouts.",
+  icons: {
+    icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+    ],
+    apple: [
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
+  manifest: "/site.webmanifest",
 };
 
 export default function RootLayout({
@@ -42,8 +53,15 @@ export default function RootLayout({
         >
           <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="container flex h-14 items-center px-4 md:px-8 max-w-7xl mx-auto justify-between">
-              <a href="/" className="font-bold text-lg hover:text-primary transition-colors">
-                📅 Handout2Calendar
+              <a href="/" className="font-bold text-lg hover:text-primary transition-colors flex items-center gap-2">
+                <div className="w-16 h-6 overflow-hidden rounded-md border border-border bg-white flex items-center justify-center shrink-0">
+                  <img
+                    src="/logo_512x512.png"
+                    alt="Handout2Calendar Logo"
+                    className="w-full h-full object-cover scale-[1.05]"
+                  />
+                </div>
+                <span>Handout2Calendar</span>
               </a>
               <div className="flex items-center gap-4">
                 <Link href="/docs">
