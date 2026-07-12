@@ -9,16 +9,17 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { FileJson, UploadCloud, Download, Calendar, ExternalLink, BookOpen } from "lucide-react";
-import { SemesterProfile } from "@/types";
+import { SemesterProfile, Event } from "@/types";
 import { handleDownloadJson, handleDownloadICS } from "@/lib/exportUtils";
 import { CourseCard } from "./CourseCard";
 
 interface DashboardViewProps {
   semesterData: SemesterProfile;
   onReset: () => void;
+  onUpdateEvent: (courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => void;
 }
 
-export function DashboardView({ semesterData, onReset }: DashboardViewProps) {
+export function DashboardView({ semesterData, onReset, onUpdateEvent }: DashboardViewProps) {
   return (
     <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full pb-20 pt-8 px-4">
       {/* The Global Header: Export and Settings */}
@@ -111,7 +112,12 @@ export function DashboardView({ semesterData, onReset }: DashboardViewProps) {
         
         <div className="grid grid-cols-1 gap-8">
           {semesterData.courses.map((course: any, idx: number) => (
-            <CourseCard key={idx} course={course} />
+            <CourseCard 
+              key={idx} 
+              course={course} 
+              courseIdx={idx}
+              onUpdateEvent={onUpdateEvent}
+            />
           ))}
         </div>
       </div>
