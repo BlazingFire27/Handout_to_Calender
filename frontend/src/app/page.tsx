@@ -1,7 +1,7 @@
 "use client"
 import { useState, useCallback, useRef } from "react";
 import { toast } from "sonner";
-import { SemesterProfile, CourseData } from "@/types";
+import { SemesterProfile, CourseData, Event } from "@/types";
 
 import { UploadOptions } from "@/components/upload/UploadOptions";
 import { UploadJson } from "@/components/upload/UploadJson";
@@ -196,6 +196,21 @@ export default function Home() {
     }
   };
 
+  const handleUpdateEvent = useCallback((courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => {
+    setSemesterData((prev) => {
+      if (!prev) return null;
+      const updatedCourses = prev.courses.map((course, cIdx) => {
+        if (cIdx !== courseIdx) return course;
+        const updatedScheme = course.evaluation_scheme.map((event, eIdx) => {
+          if (eIdx !== eventIdx) return event;
+          return { ...event, ...updatedEvent };
+        });
+        return { ...course, evaluation_scheme: updatedScheme };
+      });
+      return { ...prev, courses: updatedCourses };
+    });
+  }, []);
+
   if (view === "options") {
     return <UploadOptions onSelect={setView} />;
   }
@@ -227,6 +242,8 @@ export default function Home() {
     );
   }
 
+
+
   if (view === "dashboard" && semesterData) {
     return (
       <DashboardView 
@@ -236,6 +253,7 @@ export default function Home() {
           setPdfFiles([]);
           setSemesterData(null);
         }}
+        onUpdateEvent={handleUpdateEvent}
       />
     );
   }
