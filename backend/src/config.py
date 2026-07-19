@@ -6,7 +6,7 @@ import os
 # load_dotenv()
 
 # Using os.environ.get() explicitly as requested, bypassing local .env files
-OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+AICREDITS_API_KEY = os.environ.get("AICREDITS_API_KEY")
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 GOOGLE_BOOK_API_KEY = os.environ.get("GOOGLE_BOOK_API_KEY")
 AIGATEWAY_API_KEY = os.environ.get("AIGATEWAY_API_KEY")
