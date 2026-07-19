@@ -3,7 +3,6 @@ import asyncio
 import time
 
 from langchain_openai import ChatOpenAI
-# from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import PydanticOutputParser
 from langchain_core.messages import HumanMessage
@@ -13,8 +12,9 @@ from langgraph.graph import StateGraph, END, START
 from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
 from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_parallel
 
-from src.config import OPENAI_API_KEY, GOOGLE_API_KEY, AIGATEWAY_API_KEY
-from langchain_google_genai import ChatGoogleGenerativeAI
+from src.config import AICREDITS_API_KEY
+# from src.config import GOOGLE_API_KEY, AIGATEWAY_API_KEY
+# from langchain_google_genai import ChatGoogleGenerativeAI
 
 # ==============================================================================
 # ARCHITECTURE CONFIGURATION (As defined in README.md)
@@ -41,51 +41,48 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 # )
 
 # ------------------------------------------------------------------------------
-# CASE 2: Production
-# Text: gpt-oss-20b (OpenRouter)
-# Vision: google/gemini-2.5-flash (OpenRouter ONLY)
-# ------------------------------------------------------------------------------
-# llm = ChatOpenAI(
-#     model_name="openai/gpt-oss-20b",
-#     openai_api_base="https://openrouter.ai/api/v1",
-#     openai_api_key=OPENAI_API_KEY,
-#     temperature=0,
-#     max_retries=3, 
-# )
-# 
-# vision_llm = ChatOpenAI(
-#     model_name="google/gemini-2.5-flash",
-#     openai_api_base="https://openrouter.ai/api/v1",
-#     openai_api_key=OPENAI_API_KEY,
-#     temperature=0,
-#     max_retries=3 
-# )
-
-# ------------------------------------------------------------------------------
-# CASE 3: Development / Testing (ACTIVE)
-# Text & Vision: google/gemma-4-26b-a4b-it (AIGateway ONLY Promo)
+# CASE 2: Production (ACTIVE)
+# Text: gpt-oss-20b (AICredits)
+# Vision: google/gemini-2.5-flash-lite (AICredits ONLY)
 # ------------------------------------------------------------------------------
 llm = ChatOpenAI(
-    # model_name="google/gemma-4-26b-a4b-it",
-    model_name="moonshot/kimi-k2.6",
-    openai_api_base="https://api.aigateway.sh/v1",
-    openai_api_key=AIGATEWAY_API_KEY,
+    model_name="openai/gpt-oss-20b",
+    openai_api_base="https://api.aicredits.in/v1",
+    openai_api_key=AICREDITS_API_KEY,
     temperature=0,
     max_retries=3, 
-    request_timeout=180.0,
 )
 
 vision_llm = ChatOpenAI(
-    # model_name="google/gemma-4-26b-a4b-it",
-    model_name="moonshot/kimi-k2.6",
-    openai_api_base="https://api.aigateway.sh/v1",
-    openai_api_key=AIGATEWAY_API_KEY,
+    model_name="google/gemini-2.5-flash-lite",
+    openai_api_base="https://api.aicredits.in/v1",
+    openai_api_key=AICREDITS_API_KEY,
     temperature=0,
-    max_retries=3,
-    request_timeout=180.0,
+    max_retries=3 
 )
-# ==============================================================================
 
+# ------------------------------------------------------------------------------
+# CASE 3: Development / Testing (Archived)
+# Text & Vision: google/gemma-4-26b-a4b-it (AIGateway ONLY Promo)
+# ------------------------------------------------------------------------------
+# llm = ChatOpenAI(
+#     # model_name="google/gemma-4-26b-a4b-it",
+#     model_name="moonshot/kimi-k2.6",
+#     openai_api_base="https://api.aigateway.sh/v1",
+#     openai_api_key=AIGATEWAY_API_KEY,
+#     temperature=0,
+#     max_retries=3, 
+#     request_timeout=180.0,
+# )
+# 
+# vision_llm = ChatOpenAI(
+#     # model_name="google/gemma-4-26b-a4b-it",
+#     model_name="moonshot/kimi-k2.6",
+#     openai_api_base="https://api.aigateway.sh/v1",
+#     openai_api_key=AIGATEWAY_API_KEY,
+#     temperature=0,
+#     max_retries=3 
+# )
 
 async def extract_course_title(text: str, image_b64: str = ""):
     parser = PydanticOutputParser(pydantic_object=CourseTitle)
@@ -139,6 +136,7 @@ async def extract_course_title(text: str, image_b64: str = ""):
     except Exception as e:
         print(f"extracting course error= {e}")
         return "Unknown Course"
+    # - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives. (DISABLED: Uncomment when syllabus feature is needed)
 
 async def router_node(state: State):
     parser = PydanticOutputParser(pydantic_object=RouteDecision)
@@ -147,8 +145,7 @@ async def router_node(state: State):
     You are a document classifier for university handouts.
     Analyze the text and categorize it. It may belong to multiple categories.
     Categories:
-    - 'EVAL': MUST contain an actual Evaluation Scheme, Exam Schedule, list of Quizzes, Mid-Sem dates, Comprehensive exam dates, or Weightage tables. Do NOT classify general grading notices or make-up policies as EVAL unless actual dates or weightages are present.
-    # - 'SYLLABUS': Contains Course Plan, Topics, Lectures, Learning Objectives. (DISABLED: Uncomment when syllabus feature is needed)
+    - 'EVAL': MUST contain an actual Evaluation Scheme, Exam Schedule, list of Quizzes, Mid-Sem dates, Comprehensive exam dates, or Weightage tables. Do NOT classify general grading notices or make-up policies as EVAL unless actual dates or weightages are present. Do NOT classify Course Plans, Lecture Schedules, or lists of academic topics as EVAL.
     - 'REFERENCES': Contains Textbooks, Reference Books, required reading materials.
     - 'SKIP': General introduction, textbook lists without schedules, or completely irrelevant.
     
@@ -206,6 +203,7 @@ async def vision_eval_extractor_node(state: State):
     CRITICAL INSTRUCTION:
     1. You are analyzing an image from an INDIAN UNIVERSITY. 
     2. Dates are strictly DD/MM/YYYY.
+    3. ONLY extract items from the official Evaluation/Grading Scheme table. IGNORE weekly lecture schedules and class plans.
     
     EXTRACTION RULES:
     1. Extract 'event_name' (e.g. "Quiz 1", "Mid-Sem Exam", "Comprehensive Exam").
