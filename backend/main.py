@@ -38,7 +38,7 @@ async def process_pdf(pdf_file, user_date_format="DMY"):
             text = page.get_text()
             
             # Extract Image Base64
-            pix = page.get_pixmap(dpi=150) # Moderate DPI for API speed
+            pix = page.get_pixmap(dpi=100) # Moderate DPI for API speed
             img_bytes = pix.tobytes("png")
             b64_image = base64.b64encode(img_bytes).decode("utf-8")
             

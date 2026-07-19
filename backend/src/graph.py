@@ -54,7 +54,8 @@ llm = ChatOpenAI(
 )
 
 vision_llm = ChatOpenAI(
-    model_name="google/gemini-2.5-flash-lite",
+    # model_name="google/gemini-2.5-flash-lite",
+    model_name="qwen/qwen3-vl-8b-instruct",
     openai_api_base="https://api.aicredits.in/v1",
     openai_api_key=AICREDITS_API_KEY,
     temperature=0,
