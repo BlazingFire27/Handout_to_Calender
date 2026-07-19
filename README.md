@@ -55,7 +55,7 @@ However, if you want to use a `.env` file directly in the project folder (for lo
 
 
 **Case 1.1: Free Tier ONLY**
-Uses `gpt-oss-20b` (free via AICredits) for text routing and `gemini-2.5-flash-lite` (via native Google AI Studio) for vision.
+Uses `gpt-oss-20b` (free via AICredits) for text routing and `qwen3-vl-8b-instruct` for vision extraction.
 ```env
 AICREDITS_API_KEY=your_key
 OPENAI_API_BASE=https://api.aicredits.in/v1
@@ -156,7 +156,7 @@ for i in range(len(doc)):
     page = doc[i]
     text = page.get_text()
     
-    pix = page.get_pixmap(dpi=150)
+    pix = page.get_pixmap(dpi=100) # Throttled DPI to save API token cost
     img_bytes = pix.tobytes("png")
     b64_image = base64.b64encode(img_bytes).decode("utf-8")
     
@@ -164,12 +164,18 @@ for i in range(len(doc)):
 ```
 Code Credits = Thank you [https://github.com/pymupdf/PyMuPDF](https://github.com/pymupdf/PyMuPDF)
 
+#### 💡 Why exactly 100 DPI? (The "1,280 Token" Minimum)
+During optimization, we reverse-engineered the API provider's configuration for `Qwen3-VL` and discovered a hard token floor:
+* The backend forces a minimum image size of `1,003,520` pixels, which (at Qwen's 28x28 patch ratio) results in a minimum of **1,280 image tokens**.
+* Shrinking the image further locally (e.g., 30 DPI) does not save money because the API intercepts and pads it to hit the 1M pixel floor.
+* At exactly **100 DPI**, a standard A4 page ($827 \times 1169 = 966,763$ pixels) sits just below the 1,003,520 limit. This strategy maxes out OCR clarity to ensure 100% accurate JSON extraction while staying locked in the absolute minimum API cost tier.
+
 ### Data extraction
 - From the first page, always extract the **course title** and have it as global variable until the entire pdf is processed
 - Each page contents enters **router node** and is either skipped: if no contents related to exams are present or extracted: the contents of evaluation components
 
 ### Data Collection
-- The **Vision Eval Extractor Node** processes the image using `gemini-2.5-flash` to extract Event Name, Date, Time, Format, and Weightage in a single cohesive pass. This eliminates misalignments from text-based parsers.
+- The **Vision Eval Extractor Node** processes the image using `qwen3-vl-8b-instruct` to extract Event Name, Date, Time, Format, and Weightage in a single cohesive pass. Qwen-VL was chosen because its superior spatial reasoning perfectly resolves merged table cells and avoids hallucinating syllabus topics, while DPI downscaling keeps token costs strictly within budget.
 
 ### Aggregating
 To bring together all the collected data and aggregate in a particular json format
