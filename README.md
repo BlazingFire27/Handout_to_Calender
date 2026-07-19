@@ -55,20 +55,20 @@ However, if you want to use a `.env` file directly in the project folder (for lo
 
 
 **Case 1.1: Free Tier ONLY**
-Uses `gpt-oss-20b` (free via OpenRouter) for text routing and `gemini-2.5-flash` (via native Google AI Studio) for vision.
+Uses `gpt-oss-20b` (free via AICredits) for text routing and `gemini-2.5-flash-lite` (via native Google AI Studio) for vision.
 ```env
-OPENAI_API_KEY=your_key
-OPENAI_API_BASE=https://openrouter.ai/api/v1
+AICREDITS_API_KEY=your_key
+OPENAI_API_BASE=https://api.aicredits.in/v1
 GOOGLE_API_KEY=your_key
 GOOGLE_BOOK_API_KEY=your_key
 ENVIRONMENT=development
 ```
 
-**Case 1.2: Deployed (OpenRouter $5 Budget)**
-Uses both text and vision models via OpenRouter to simplify API management.
+**Case 1.2: Deployed (AICredits Budget)**
+Uses both text and vision models via AICredits to simplify API management.
 ```env
-OPENAI_API_KEY=your_key
-OPENAI_API_BASE=https://openrouter.ai/api/v1
+AICREDITS_API_KEY=your_key
+OPENAI_API_BASE=https://api.aicredits.in/v1
 GOOGLE_BOOK_API_KEY=your_key
 ENVIRONMENT=production
 ```
