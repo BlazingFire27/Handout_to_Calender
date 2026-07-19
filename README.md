@@ -25,7 +25,7 @@ Modules used:
  ┃ ┣ 📜 api.py           # FastAPI Server Entrypoint
  ┃ ┣ 📜 main.py          # Legacy PDF Processor
  ┃ ┗ 📜 requirements.txt # Python Dependencies
- ┣ 📂 frontend/          # (Planned) Next.js Dashboard
+ ┣ 📂 frontend/          # Next.js Dashboard
  ┣ 📂 Images/            # Documentation Assets
  ┣ 📜 .env               # API Keys
  ┗ 📜 README.md
@@ -191,9 +191,6 @@ entry = {
 }
 ```
 
-## Note: 
-User can input multiple pdfs at once
-
 ## OUTPUT UI
 ![Working Model](Images/working_model_1.png)
 
@@ -215,3 +212,7 @@ User can input multiple pdfs at once
 ![CLI OUTPUT](Images/output.png)
 
 *Note: For page 3 of both Electrical Machines and Digital Design Courses, the extraction took longer, indicating those were the two pages with the exam contents.*
+
+### Note: 
+User can input multiple pdfs at once
+
