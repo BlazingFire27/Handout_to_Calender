@@ -1,6 +1,7 @@
 import os
 import asyncio
 import shutil
+import hashlib
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -47,6 +48,14 @@ async def generate_schedule(
 ):
     if not file.filename.endswith(".pdf"):
         return JSONResponse(status_code=400, content={"error": "File must be a PDF."})
+
+    # Generate SHA-256 hash for future caching
+    file_content = await file.read()
+    pdf_hash = hashlib.sha256(file_content).hexdigest()
+    print(f"🔑 [CACHE] Generated Hash for {file.filename}: {pdf_hash}")
+    
+    # Reset file cursor so the file can be saved to disk correctly
+    await file.seek(0)
 
     # Save uploaded file temporarily
     temp_file_path = os.path.join(UPLOAD_DIR, file.filename)
