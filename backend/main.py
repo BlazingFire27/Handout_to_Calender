@@ -136,7 +136,7 @@ async def process_pdf_stream(pdf_file, user_date_format="DMY"):
         for i in range(total_pages):
             page = doc[i]
             text = page.get_text()
-            pix = page.get_pixmap(dpi=150)
+            pix = page.get_pixmap(dpi=81)
             img_bytes = pix.tobytes("png")
             b64_image = base64.b64encode(img_bytes).decode("utf-8")
             pages.append((i+1, text, b64_image))
