@@ -2,6 +2,7 @@ import os
 import asyncio
 import shutil
 import hashlib
+import json
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, UploadFile, File, Form, Request
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -69,6 +70,28 @@ async def generate_schedule(
     
     # Reset file cursor so the file can be saved to disk correctly
     await file.seek(0)
+    
+    # ---------------- CACHE READ LOGIC ----------------
+    if redis_client:
+        try:
+            cached_data = redis_client.get(pdf_hash)
+            if cached_data:
+                print(f"🎯 [CACHE HIT] Found {file.filename} in cache! Bypassing AI.")
+                
+                # Upstash Redis client might return a string or dict. 
+                if isinstance(cached_data, str):
+                    cached_data = json.loads(cached_data)
+
+                # Return a StreamingResponse that instantly streams the cached JSON
+                async def cached_generator():
+                    yield json.dumps({"type": "init", "total_pages": 1}) + "\n"
+                    yield json.dumps({"type": "progress", "message": "Cache Hit! Instantly loaded."}) + "\n"
+                    yield json.dumps({"type": "done", "data": cached_data}) + "\n"
+                
+                return StreamingResponse(cached_generator(), media_type="application/x-ndjson")
+        except Exception as e:
+            print(f"⚠️ Redis read error: {e}")
+    # ---------------------------------------------------
 
     # Save uploaded file temporarily
     temp_file_path = os.path.join(UPLOAD_DIR, file.filename)
@@ -79,6 +102,27 @@ async def generate_schedule(
         try:
             async for chunk in process_pdf_stream(temp_file_path, date_format):
                 yield chunk
+                # ---------------- CACHE WRITE LOGIC ----------------
+                try:
+                    chunk_data = json.loads(chunk.strip())
+                    if chunk_data.get("type") == "done":
+                        final_data = chunk_data.get("data")
+                        if redis_client and final_data:
+                            # Prevent caching if the AI failed (e.g., out of budget) or returned empty data
+                            is_empty = (
+                                not final_data.get("evaluation_scheme") and 
+                                not final_data.get("syllabus_topics") and 
+                                not final_data.get("references")
+                            )
+                            
+                            if not is_empty:
+                                redis_client.set(pdf_hash, json.dumps(final_data))
+                                print(f"💾 [CACHE WRITE] Saved {file.filename} to Redis!")
+                            else:
+                                print(f"⚠️ [CACHE SKIP] {file.filename} returned empty data. Not caching to allow future retries.")
+                except Exception as cache_err:
+                    print(f"⚠️ Redis write error: {cache_err}")
+                # ----------------------------------------------------
         except asyncio.CancelledError:
             # Client disconnected mid-stream
             pass
