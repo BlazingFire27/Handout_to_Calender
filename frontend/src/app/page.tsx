@@ -150,6 +150,11 @@ export default function Home() {
                 updateGlobalProgress();
               } else if (data.type === "done") {
                 setFileStatuses(prev => ({ ...prev, [file.name]: "✅ Extraction Complete" }));
+                
+                // For Cache Hits: We skip page_done, so force progress to 100% here
+                progressTracker[index].completedPages = progressTracker[index].totalPages;
+                updateGlobalProgress();
+
                 const finalData = data.data;
                 const courseTitle = finalData.course_title || file.name;
                 finalData.evaluation_scheme.forEach((e: any) => e.course_title = courseTitle);
