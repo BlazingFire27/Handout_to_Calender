@@ -10,6 +10,19 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from main import process_pdf, process_pdf_stream
+from upstash_redis import Redis
+from src.config import UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
+
+# Initialize Redis client (Fail gracefully if keys are missing)
+redis_client = None
+if UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN:
+    try:
+        redis_client = Redis(url=UPSTASH_REDIS_REST_URL, token=UPSTASH_REDIS_REST_TOKEN)
+        print("✅ Connected to Upstash Redis Cache!")
+    except Exception as e:
+        print(f"⚠️ Failed to connect to Redis: {e}")
+else:
+    print("⚠️ Redis credentials not found. Caching will be disabled.")
 
 # Initialize Rate Limiter using client IP
 limiter = Limiter(key_func=get_remote_address)
