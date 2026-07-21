@@ -11,7 +11,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from main import process_pdf, process_pdf_stream
-from upstash_redis import Redis
+from upstash_redis.asyncio import Redis
 from src.config import UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN
 
 # Initialize Redis client (Fail gracefully if keys are missing)
@@ -54,7 +54,7 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @app.post("/generate")
-@limiter.limit("20/day", exempt_when=lambda: os.getenv("ENVIRONMENT") == "development")
+@limiter.limit("3000/day", exempt_when=lambda: os.getenv("ENVIRONMENT") == "development")
 async def generate_schedule(
     request: Request,
     file: UploadFile = File(...),
@@ -74,7 +74,7 @@ async def generate_schedule(
     # ---------------- CACHE READ LOGIC ----------------
     if redis_client:
         try:
-            cached_data = redis_client.get(pdf_hash)
+            cached_data = await redis_client.get(pdf_hash)
             if cached_data:
                 print(f"🎯 [CACHE HIT] Found {file.filename} in cache! Bypassing AI.")
                 
@@ -116,7 +116,7 @@ async def generate_schedule(
                             )
                             
                             if not is_empty:
-                                redis_client.set(pdf_hash, json.dumps(final_data))
+                                await redis_client.set(pdf_hash, json.dumps(final_data))
                                 print(f"💾 [CACHE WRITE] Saved {file.filename} to Redis!")
                             else:
                                 print(f"⚠️ [CACHE SKIP] {file.filename} returned empty data. Not caching to allow future retries.")
