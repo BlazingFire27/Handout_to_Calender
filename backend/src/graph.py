@@ -10,7 +10,7 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END, START
 
 from src.schema import State, RouteDecision, EvalList, CourseTitle, SyllabusList, ReferenceList
-from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_parallel
+from src.utils import normalize_event_name, clean_subject_key, predefined, enrich_refs_async
 
 from src.config import AICREDITS_API_KEY
 # from src.config import GOOGLE_API_KEY, AIGATEWAY_API_KEY
@@ -395,10 +395,10 @@ def route_decision(state: State) -> str:
         
     return "end"
 
-def post_process_node(state: State):
+async def post_process_node(state: State):
     refs = state.get("reference_data", [])
     if refs:
-        enrich_refs_parallel(refs)
+        await enrich_refs_async(refs)
     return {"reference_data": refs}
 
 # GRAPH NOW
