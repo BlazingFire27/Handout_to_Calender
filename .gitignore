@@ -11,3 +11,4 @@ backend/output/
 backend/Handouts/
 .pytest_cache/
 to_learn_understand.md
+*.zip
