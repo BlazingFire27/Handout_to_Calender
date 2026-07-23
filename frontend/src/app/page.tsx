@@ -203,7 +203,7 @@ export default function Home() {
     }
   };
 
-  const [reanalyzeStatus, setReanalyzeStatus] = useState<{idx: number, message: string} | null>(null);
+  const [reanalyzeStatuses, setReanalyzeStatuses] = useState<Record<number, string>>({});
 
   const handleReanalyzeCourse = async (courseIdx: number) => {
     const course = semesterData?.courses[courseIdx];
@@ -215,7 +215,7 @@ export default function Home() {
       return;
     }
     
-    setReanalyzeStatus({ idx: courseIdx, message: "Connecting to AI Gateway..." });
+    setReanalyzeStatuses(prev => ({ ...prev, [courseIdx]: "Connecting to AI Gateway..." }));
     
     const file = pdfFiles[pdfIndex];
     const formData = new FormData();
@@ -247,11 +247,11 @@ export default function Home() {
           try {
             const data = JSON.parse(line);
             if (data.type === "init") {
-              setReanalyzeStatus({ idx: courseIdx, message: `Analyzing ${data.total_pages} pages...` });
+              setReanalyzeStatuses(prev => ({ ...prev, [courseIdx]: `Analyzing ${data.total_pages} pages...` }));
             } else if (data.type === "progress") {
-              setReanalyzeStatus({ idx: courseIdx, message: data.message });
+              setReanalyzeStatuses(prev => ({ ...prev, [courseIdx]: data.message }));
             } else if (data.type === "page_done") {
-              setReanalyzeStatus({ idx: courseIdx, message: `Extracted ${data.events_found || 0} exams so far...` });
+              setReanalyzeStatuses(prev => ({ ...prev, [courseIdx]: `Extracted ${data.events_found || 0} exams so far...` }));
             } else if (data.type === "done") {
               finalData = data.data;
               const courseTitle = finalData.course_title || file.name;
@@ -280,7 +280,11 @@ export default function Home() {
       console.error(error);
       toast.error("Network error during re-analysis", { id: "reanalyze" });
     } finally {
-      setReanalyzeStatus(null);
+      setReanalyzeStatuses(prev => {
+        const copy = { ...prev };
+        delete copy[courseIdx];
+        return copy;
+      });
     }
   };
 
@@ -366,7 +370,7 @@ export default function Home() {
       <DashboardView 
         semesterData={semesterData} 
         hasOriginalPdfs={pdfFiles.length > 0}
-        reanalyzeStatus={reanalyzeStatus}
+        reanalyzeStatuses={reanalyzeStatuses}
         onReset={() => {
           setView("options");
           setPdfFiles([]);

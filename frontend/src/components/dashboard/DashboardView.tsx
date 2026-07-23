@@ -16,7 +16,7 @@ import { CourseCard } from "./CourseCard";
 interface DashboardViewProps {
   semesterData: SemesterProfile;
   hasOriginalPdfs: boolean;
-  reanalyzeStatus: { idx: number; message: string } | null;
+  reanalyzeStatuses: Record<number, string>;
   onReset: () => void;
   onUpdateEvent: (courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => void;
   onAddEvent: (courseIdx: number, newEvent: Event) => void;
@@ -24,7 +24,7 @@ interface DashboardViewProps {
   onReanalyzeCourse: (courseIdx: number) => void;
 }
 
-export function DashboardView({ semesterData, hasOriginalPdfs, reanalyzeStatus, onReset, onUpdateEvent, onAddEvent, onDeleteEvent, onReanalyzeCourse }: DashboardViewProps) {
+export function DashboardView({ semesterData, hasOriginalPdfs, reanalyzeStatuses, onReset, onUpdateEvent, onAddEvent, onDeleteEvent, onReanalyzeCourse }: DashboardViewProps) {
   return (
     <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full pb-20 pt-8 px-4">
       {/* The Global Header: Export and Settings */}
@@ -122,7 +122,7 @@ export function DashboardView({ semesterData, hasOriginalPdfs, reanalyzeStatus, 
               course={course} 
               courseIdx={idx}
               hasOriginalPdfs={hasOriginalPdfs}
-              reanalyzeStatus={reanalyzeStatus?.idx === idx ? reanalyzeStatus : null}
+              reanalyzeStatus={reanalyzeStatuses[idx] ? { idx, message: reanalyzeStatuses[idx] } : null}
               onUpdateEvent={onUpdateEvent}
               onAddEvent={onAddEvent}
               onDeleteEvent={onDeleteEvent}
