@@ -302,6 +302,32 @@ export default function Home() {
     });
   }, []);
 
+  const handleAddEvent = useCallback((courseIdx: number, newEvent: Event) => {
+    setSemesterData((prev) => {
+      if (!prev) return null;
+      const updatedCourses = prev.courses.map((course, cIdx) => {
+        if (cIdx !== courseIdx) return course;
+        const updatedScheme = [...course.evaluation_scheme, newEvent];
+        return { ...course, evaluation_scheme: updatedScheme };
+      });
+      return { ...prev, courses: updatedCourses };
+    });
+    toast.success("Event Added!", { description: "Please download the updated JSON file to preserve your changes." });
+  }, []);
+
+  const handleDeleteEvent = useCallback((courseIdx: number, eventIdx: number) => {
+    setSemesterData((prev) => {
+      if (!prev) return null;
+      const updatedCourses = prev.courses.map((course, cIdx) => {
+        if (cIdx !== courseIdx) return course;
+        const updatedScheme = course.evaluation_scheme.filter((_, eIdx) => eIdx !== eventIdx);
+        return { ...course, evaluation_scheme: updatedScheme };
+      });
+      return { ...prev, courses: updatedCourses };
+    });
+    toast.success("Event Deleted!", { description: "Please download the updated JSON file to preserve your changes." });
+  }, []);
+
   if (view === "options") {
     return <UploadOptions onSelect={setView} />;
   }
@@ -347,6 +373,8 @@ export default function Home() {
           setSemesterData(null);
         }}
         onUpdateEvent={handleUpdateEvent}
+        onAddEvent={handleAddEvent}
+        onDeleteEvent={handleDeleteEvent}
         onReanalyzeCourse={handleReanalyzeCourse}
       />
     );
