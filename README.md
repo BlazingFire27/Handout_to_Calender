@@ -14,6 +14,8 @@ Modules used:
 4. langchain_openai & langchain_google_genai (for LLM routing and Vision extraction)
 5. PyMuPDF (fitz) for PDF-to-Image rendering
 6. Datetime, Pydantic, and dateparser (for mathematical date scheduling)
+7. Upstash Redis (for Serverless Caching)
+8. Microsoft Azure (for Production Backend Hosting)
 
 ## Folder Structure
 ```text
@@ -24,6 +26,7 @@ Modules used:
  ┃ ┣ 📂 tests/           # Pytest API & Unit Tests
  ┃ ┣ 📜 api.py           # FastAPI Server Entrypoint
  ┃ ┣ 📜 main.py          # Legacy PDF Processor
+ ┃ ┣ 📜 zip_backend.py   # Azure Deployment Packaging Script
  ┃ ┗ 📜 requirements.txt # Python Dependencies
  ┣ 📂 frontend/          # Next.js Dashboard
  ┣ 📂 Images/            # Documentation Assets
@@ -32,9 +35,9 @@ Modules used:
 ```
 
 ## Future ideas:
-1. Deployment & Hosting
-2. Testing & QA
-3. API cost management
+1. Deployment & Hosting (COMPLETED)
+2. Testing & QA (ALWAYS HAPPENING)
+3. API cost management (worth checking)
 
 ## .env contents:
 The `.env` file must be placed in the root directory of this project like shown below
@@ -55,17 +58,16 @@ However, if you want to use a `.env` file directly in the project folder (for lo
 
 
 **Case 1.1: Free Tier ONLY**
-Uses `gpt-oss-20b` (free via AICredits) for text routing and `qwen3-vl-8b-instruct` for vision extraction.
+Uses `gpt-oss-20b` (free via OpenRouter) for text routing and `gemini-2.5-flash` (free via Google AI Studio) for vision extraction.
 ```env
-AICREDITS_API_KEY=your_key
-OPENAI_API_BASE=https://api.aicredits.in/v1
+OPENROUTER_API_KEY=your_key
 GOOGLE_API_KEY=your_key
 GOOGLE_BOOK_API_KEY=your_key
 ENVIRONMENT=development
 ```
 
 **Case 1.2: Deployed (AICredits Budget)**
-Uses both text and vision models via AICredits to simplify API management.
+Production configuration. Uses `gpt-oss-20b` for text routing and `qwen3-vl-8b-instruct` for vision extraction (both via AICredits).
 ```env
 AICREDITS_API_KEY=your_key
 OPENAI_API_BASE=https://api.aicredits.in/v1
@@ -73,10 +75,11 @@ GOOGLE_BOOK_API_KEY=your_key
 ENVIRONMENT=production
 ```
 
-**Case 1.3: AIGateway ONLY (Current Promo)**
-Uses explicitly allowed free multimodal models (e.g., `google/gemma-4-26b-a4b-it`) via AIGateway.
+**Case 1.3: AIGateway (Promo)**
+Uses `kimi-2.6` via `aigateway.sh` for both text classification and multimodal vision extraction.
 ```env
 AIGATEWAY_API_KEY=your_key
+OPENAI_API_BASE=https://api.aigateway.sh/v1
 GOOGLE_BOOK_API_KEY=your_key
 ENVIRONMENT=development
 ```
@@ -97,7 +100,7 @@ ONCE ENVIRONMENT is ACTIVATED </br>
 ## Project Overview
 This project is a high-performance backend API built with **FastAPI** and **LangGraph**. It automates the extraction of schedules, syllabi, and references from University Course Handout PDFs.
 
-- **FastAPI Layer:** Receives the uploaded PDF and securely handles rate-limiting (`20/day` via `slowapi`).
+- **FastAPI Layer:** Receives the uploaded PDF and securely handles rate-limiting (`3000/day` via `slowapi`).
 - **LangGraph Multi-Agent Pipeline:**
   - **Router Node (Text):** Quickly analyzes raw PDF text to classify the page, skipping irrelevant pages to save compute.
   - **Vision Extractor Nodes:** If the page contains an Evaluation Scheme, Syllabus, or References, a Multimodal Vision model extracts the complex tables directly from a Base64 image of the page.
@@ -156,11 +159,11 @@ for i in range(len(doc)):
 ```
 Code Credits = Thank you [https://github.com/pymupdf/PyMuPDF](https://github.com/pymupdf/PyMuPDF)
 
-#### 💡 Why exactly 100 DPI? (The "1,280 Token" Minimum)
-During optimization, we reverse-engineered the API provider's configuration for `Qwen3-VL` and discovered a hard token floor:
-* The backend forces a minimum image size of `1,003,520` pixels, which (at Qwen's 28x28 patch ratio) results in a minimum of **1,280 image tokens**.
-* Shrinking the image further locally (e.g., 30 DPI) does not save money because the API intercepts and pads it to hit the 1M pixel floor.
-* At exactly **100 DPI**, a standard A4 page ($827 \times 1169 = 966,763$ pixels) sits just below the 1,003,520 limit. This strategy maxes out OCR clarity to ensure 100% accurate JSON extraction while staying locked in the absolute minimum API cost tier.
+#### 💡 Why exactly 81 DPI?
+During aggressive cost optimization, we discovered that manipulating the DPI of the PyMuPDF rasterization profoundly affects the number of image tokens sent to the API. 
+* Standard 300 DPI creates massive high-res images that consume excess tokens without significantly improving OCR accuracy for standard academic tables.
+* Going too low (e.g., 30 DPI) makes text illegible for the Vision Model, leading to catastrophic hallucinations.
+* At exactly **81 DPI**, a standard A4 page is scaled perfectly to remain crisp enough for `qwen3` and `gemini-2.5-flash` to extract complex merged tables, while severely minimizing the token footprint—bringing our total API cost down to an ultra-efficient ~₹0.13 per PDF.
 
 ### Data extraction
 - From the first page, always extract the **course title** and have it as global variable until the entire pdf is processed
