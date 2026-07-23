@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library, Pencil, RefreshCw, Loader2 } from "lucide-react";
+import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library, Pencil, RefreshCw, Loader2, Trash2, Plus } from "lucide-react";
 import { CourseData, Event } from "@/types";
 import { handleExportCSV, generateAIPrompt, handleCopyPrompt } from "@/lib/exportUtils";
 import {
@@ -43,12 +43,14 @@ interface CourseCardProps {
   hasOriginalPdfs: boolean;
   reanalyzeStatus?: { idx: number; message: string } | null;
   onUpdateEvent: (courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => void;
+  onAddEvent: (courseIdx: number, newEvent: Event) => void;
+  onDeleteEvent: (courseIdx: number, eventIdx: number) => void;
   onReanalyzeCourse: (courseIdx: number) => void;
 }
 
 const DEFAULT_ACCORDION_STATE = ["exam-0"];
 
-export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus, onUpdateEvent, onReanalyzeCourse }: CourseCardProps) {
+export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus, onUpdateEvent, onAddEvent, onDeleteEvent, onReanalyzeCourse }: CourseCardProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   // Editing state
@@ -125,7 +127,12 @@ export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus
       Subject: subject
     };
 
-    onUpdateEvent(editingEvent.courseIdx, editingEvent.eventIdx, updated);
+    if (editingEvent.eventIdx >= course.evaluation_scheme.length) {
+      onAddEvent(courseIdx, updated as Event);
+    } else {
+      onUpdateEvent(editingEvent.courseIdx, editingEvent.eventIdx, updated);
+    }
+    
     setEditingEvent(null);
   };
 
@@ -198,10 +205,24 @@ export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus
 
                     return (
                       <AccordionItem key={eIdx} value={`exam-${eIdx}`} className="border rounded-lg px-4 bg-background">
-                        <AccordionTrigger className="hover:no-underline py-3 text-left">
+                        <AccordionTrigger className="hover:no-underline py-3 text-left group">
                           <div className="flex flex-1 items-center justify-between mr-4 gap-4">
                             <span className="font-semibold">{exam.Event_Name}</span>
-                            <span className="text-muted-foreground text-sm shrink-0">{dateDay || fallbackDate}</span>
+                            <div className="flex items-center gap-4">
+                              <span className="text-muted-foreground text-sm shrink-0">{dateDay || fallbackDate}</span>
+                              <div
+                                role="button"
+                                tabIndex={0}
+                                className="flex items-center justify-center w-6 h-6 rounded-md opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:bg-destructive/10 cursor-pointer"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  onDeleteEvent(courseIdx, eIdx);
+                                }}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </div>
+                            </div>
                           </div>
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
@@ -243,8 +264,26 @@ export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus
                   })}
                 </Accordion>
               ) : (
-                <p className="text-muted-foreground italic">No exams found for this course.</p>
+                <p className="text-muted-foreground italic mb-4">No exams found for this course.</p>
               )}
+              
+              <Button 
+                variant="outline" 
+                className="w-full mt-4 border-dashed border-2 hover:bg-muted/50 text-muted-foreground hover:text-foreground"
+                onClick={() => {
+                  const newBlankExam: Event = {
+                    Event_Name: "",
+                    Start_DateTime: "",
+                    End_DateTime: "",
+                    Format: "",
+                    Weightage: "",
+                    Subject: course.course_title
+                  };
+                  setEditingEvent({ courseIdx, eventIdx: course.evaluation_scheme.length, exam: newBlankExam });
+                }}
+              >
+                <Plus className="w-4 h-4 mr-2" /> Add Exam Component
+              </Button>
             </TabsContent>
 
             {/* ═══════════ SYLLABUS TAB — DISABLED ═══════════ */}
