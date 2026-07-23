@@ -58,7 +58,8 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 async def generate_schedule(
     request: Request,
     file: UploadFile = File(...),
-    date_format: str = Form("DMY")
+    date_format: str = Form("DMY"),
+    force_refresh: bool = Form(False)
 ):
     if not file.filename.endswith(".pdf"):
         return JSONResponse(status_code=400, content={"error": "File must be a PDF."})
@@ -72,7 +73,7 @@ async def generate_schedule(
     await file.seek(0)
     
     # ---------------- CACHE READ LOGIC ----------------
-    if redis_client:
+    if redis_client and not force_refresh:
         try:
             cached_data = await redis_client.get(pdf_hash)
             if cached_data:

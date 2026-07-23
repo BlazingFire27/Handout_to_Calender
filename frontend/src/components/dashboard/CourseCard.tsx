@@ -6,7 +6,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library, Pencil } from "lucide-react";
+import { Download, Calendar, Copy, Search, BookOpen, Bot, MessageSquare, ExternalLink, X, BookMarked, Library, Pencil, RefreshCw, Loader2 } from "lucide-react";
 import { CourseData, Event } from "@/types";
 import { handleExportCSV, generateAIPrompt, handleCopyPrompt } from "@/lib/exportUtils";
 import {
@@ -40,12 +40,15 @@ function buildGoogleCalendarUrl(exam: any, courseTitle: string): string | null {
 interface CourseCardProps {
   course: CourseData;
   courseIdx: number;
+  hasOriginalPdfs: boolean;
+  reanalyzeStatus?: { idx: number; message: string } | null;
   onUpdateEvent: (courseIdx: number, eventIdx: number, updatedEvent: Partial<Event>) => void;
+  onReanalyzeCourse: (courseIdx: number) => void;
 }
 
 const DEFAULT_ACCORDION_STATE = ["exam-0"];
 
-export function CourseCard({ course, courseIdx, onUpdateEvent }: CourseCardProps) {
+export function CourseCard({ course, courseIdx, hasOriginalPdfs, reanalyzeStatus, onUpdateEvent, onReanalyzeCourse }: CourseCardProps) {
   const [zoomedImage, setZoomedImage] = useState<string | null>(null);
 
   // Editing state
@@ -129,8 +132,27 @@ export function CourseCard({ course, courseIdx, onUpdateEvent }: CourseCardProps
   return (
     <>
       <Card className="shadow-sm overflow-hidden border-border/50">
-        <CardHeader className="bg-muted/20 border-b pb-4">
-          <CardTitle className="text-2xl">{course.course_title}</CardTitle>
+        <CardHeader className="bg-muted/20 border-b pb-4 flex flex-row items-center justify-between">
+          <CardTitle className="text-2xl m-0 flex items-center gap-4">
+            {course.course_title}
+            {reanalyzeStatus && (
+              <span className="text-sm font-normal text-muted-foreground flex items-center bg-muted px-3 py-1 rounded-full animate-pulse">
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                {reanalyzeStatus.message}
+              </span>
+            )}
+          </CardTitle>
+          {hasOriginalPdfs && !reanalyzeStatus && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onReanalyzeCourse(courseIdx)}
+              className="text-primary hover:bg-primary hover:text-primary-foreground transition-colors"
+            >
+              <RefreshCw className="w-4 h-4 mr-2" />
+              Re-Analyze
+            </Button>
+          )}
         </CardHeader>
 
         <CardContent className="p-0">

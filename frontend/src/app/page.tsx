@@ -160,6 +160,7 @@ export default function Home() {
                 finalData.evaluation_scheme.forEach((e: any) => e.course_title = courseTitle);
                 finalData.syllabus_topics.forEach((s: any) => s.course_title = courseTitle);
                 finalData.references.forEach((r: any) => r.course_title = courseTitle);
+                finalData.original_pdf_index = index;
                 aggregatedCourses.push(finalData);
               }
             } catch (err) {
@@ -199,6 +200,87 @@ export default function Home() {
           description: "Save this JSON for instant access next time.",
         });
       }
+    }
+  };
+
+  const [reanalyzeStatus, setReanalyzeStatus] = useState<{idx: number, message: string} | null>(null);
+
+  const handleReanalyzeCourse = async (courseIdx: number) => {
+    const course = semesterData?.courses[courseIdx];
+    if (!course) return;
+    
+    const pdfIndex = course.original_pdf_index;
+    if (pdfIndex === undefined || !pdfFiles[pdfIndex]) {
+      toast.error("Original PDF missing", { description: "Cannot re-analyze without the original PDF file." });
+      return;
+    }
+    
+    setReanalyzeStatus({ idx: courseIdx, message: "Connecting to AI Gateway..." });
+    
+    const file = pdfFiles[pdfIndex];
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("date_format", "DMY");
+    formData.append("force_refresh", "true");
+
+    try {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+      const response = await fetch(`${API_URL}/generate`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.body) throw new Error("No response body");
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder("utf-8");
+      
+      let finalData = null;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split("\n").filter(Boolean);
+        
+        for (const line of lines) {
+          try {
+            const data = JSON.parse(line);
+            if (data.type === "init") {
+              setReanalyzeStatus({ idx: courseIdx, message: `Analyzing ${data.total_pages} pages...` });
+            } else if (data.type === "progress") {
+              setReanalyzeStatus({ idx: courseIdx, message: data.message });
+            } else if (data.type === "page_done") {
+              setReanalyzeStatus({ idx: courseIdx, message: `Extracted ${data.events_found || 0} exams so far...` });
+            } else if (data.type === "done") {
+              finalData = data.data;
+              const courseTitle = finalData.course_title || file.name;
+              finalData.evaluation_scheme.forEach((e: any) => e.course_title = courseTitle);
+              finalData.syllabus_topics.forEach((s: any) => s.course_title = courseTitle);
+              finalData.references.forEach((r: any) => r.course_title = courseTitle);
+              finalData.original_pdf_index = pdfIndex;
+            }
+          } catch (err) {}
+        }
+      }
+      
+      if (finalData) {
+        setSemesterData(prev => {
+          if (!prev) return prev;
+          const newCourses = [...prev.courses];
+          newCourses[courseIdx] = finalData;
+          return { courses: newCourses };
+        });
+        toast.success("Cache overwritten! Document re-analyzed.", { id: "reanalyze" });
+      } else {
+        toast.error("Re-analysis failed", { id: "reanalyze" });
+      }
+
+    } catch (error) {
+      console.error(error);
+      toast.error("Network error during re-analysis", { id: "reanalyze" });
+    } finally {
+      setReanalyzeStatus(null);
     }
   };
 
@@ -257,12 +339,15 @@ export default function Home() {
     return (
       <DashboardView 
         semesterData={semesterData} 
+        hasOriginalPdfs={pdfFiles.length > 0}
+        reanalyzeStatus={reanalyzeStatus}
         onReset={() => {
           setView("options");
           setPdfFiles([]);
           setSemesterData(null);
         }}
         onUpdateEvent={handleUpdateEvent}
+        onReanalyzeCourse={handleReanalyzeCourse}
       />
     );
   }
