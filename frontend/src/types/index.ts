@@ -26,6 +26,7 @@ export interface CourseData {
   evaluation_scheme: Event[];
   syllabus_topics: SyllabusTopic[];
   references: Reference[];
+  original_pdf_index?: number;
 }
 
 export interface SemesterProfile {
